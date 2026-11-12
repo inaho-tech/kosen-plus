@@ -383,7 +383,7 @@ struct CourseContentsView: View {
                             if !categories.isEmpty { FilterMenu(title: "カテゴリ", selected: $selectedCategory, options: categories) }
                             Button { showOnlyAvailable.toggle() } label: {
                                 Label("利用可能", systemImage: showOnlyAvailable ? "checkmark.circle.fill" : "circle")
-                                    .font(.caption.weight(.semibold)).foregroundStyle(showOnlyAvailable ? .indigo : .primary)
+                                    .font(.caption.weight(.semibold)).foregroundStyle(showOnlyAvailable ? Color.indigo : Color.primary)
                                     .padding(.horizontal, 10).frame(height: 36).appCard(cornerRadius: 11)
                             }.buttonStyle(.plain)
                             Spacer()
@@ -413,7 +413,7 @@ private struct CourseContentCardView: View {
                 HStack(spacing: 9) {
                     if let count = item.usageCount {
                         Label("利用 \(count)回", systemImage: item.hasSubmitted ? "checkmark.circle.fill" : "clock")
-                            .font(.caption).foregroundStyle(item.hasSubmitted ? .green : .secondary)
+                            .font(.caption).foregroundStyle(item.hasSubmitted ? Color.green : Color.secondary)
                     }
                     if let period = item.availablePeriod, !period.isEmpty {
                         Text(period).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
@@ -471,7 +471,7 @@ private struct ScoreCard: View {
                 if let average = item.average { Text("平均 \(String(format: "%.1f", average))").font(.caption).foregroundStyle(.secondary) }
             }
             Spacer()
-            Text(item.scoreText.isEmpty ? "—" : item.scoreText).font(.title3.bold()).foregroundStyle(item.score == nil ? .secondary : .purple)
+            Text(item.scoreText.isEmpty ? "—" : item.scoreText).font(.title3.bold()).foregroundStyle(item.score == nil ? Color.secondary : Color.purple)
         }.padding(13).frame(minHeight: 78).appCard()
     }
 }
@@ -494,7 +494,7 @@ private struct CourseReportsView: View {
                     LazyVStack(spacing: 11) {
                         ForEach(loader.reports) { report in
                             VStack(alignment: .leading, spacing: 9) {
-                                HStack { Text(report.taskName).font(.headline); Spacer(); Text(report.result).font(.caption.bold()).foregroundStyle(report.result == "○" || report.result == "OK" ? .green : .secondary) }
+                                HStack { Text(report.taskName).font(.headline); Spacer(); Text(report.result).font(.caption.bold()).foregroundStyle(report.result == "○" || report.result == "OK" ? Color.green : Color.secondary) }
                                 HStack { if !report.questionNumber.isEmpty { Text("設問 \(report.questionNumber)") }; Spacer(); Text(report.scoreText) }.font(.caption).foregroundStyle(.secondary)
                                 if !report.submissionDate.isEmpty { Label(report.submissionDate, systemImage: "calendar").font(.caption).foregroundStyle(.secondary) }
                                 if let comment = report.comment, !comment.isEmpty { Text(comment).font(.subheadline).padding(9).frame(maxWidth: .infinity, alignment: .leading).background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 9)) }

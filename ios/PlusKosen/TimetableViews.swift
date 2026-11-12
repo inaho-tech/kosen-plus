@@ -52,7 +52,7 @@ struct BusTimetableView: View {
                     Spacer()
                     Button { showOnlyUpcoming.toggle() } label: {
                         Label("これから", systemImage: showOnlyUpcoming ? "checkmark.circle.fill" : "clock.arrow.circlepath")
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(showOnlyUpcoming ? .green : .primary)
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(showOnlyUpcoming ? Color.green : Color.primary)
                     }.buttonStyle(.plain)
                 }.padding(.horizontal, 5)
             }.padding(14).appCard().padding(.horizontal, 16)
@@ -62,7 +62,7 @@ struct BusTimetableView: View {
                     let isNext = item.id == nextBus?.id
                     let isPast = item.minutes < nowMinutes
                     HStack(spacing: 14) {
-                        Text(item.label).font(.title3.monospacedDigit().weight(.bold)).foregroundStyle(isNext ? .green : .primary).frame(width: 58, alignment: .leading)
+                        Text(item.label).font(.title3.monospacedDigit().weight(.bold)).foregroundStyle(isNext ? Color.green : Color.primary).frame(width: 58, alignment: .leading)
                         AppIconTile(symbol: "bus.fill", color: .green, size: 36)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(item.stop).font(.headline)
@@ -193,7 +193,7 @@ private struct StationCard: View {
                 Text(station.dokoLineName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            Button(action: toggleFavorite) { Image(systemName: favorite ? "star.fill" : "star").foregroundStyle(favorite ? .yellow : .secondary).frame(width: 38, height: 38) }.buttonStyle(.plain)
+            Button(action: toggleFavorite) { Image(systemName: favorite ? "star.fill" : "star").foregroundStyle(favorite ? Color.yellow : Color.secondary).frame(width: 38, height: 38) }.buttonStyle(.plain)
             Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
         }.padding(13).appCard()
     }
@@ -219,7 +219,7 @@ struct TrainDetailView: View {
                 Spacer()
                 Button { settings.toggleFavorite(station.id) } label: {
                     Image(systemName: settings.trainFavorites.contains(station.id) ? "star.fill" : "star")
-                        .foregroundStyle(settings.trainFavorites.contains(station.id) ? .yellow : .secondary).font(.title3)
+                        .foregroundStyle(settings.trainFavorites.contains(station.id) ? Color.yellow : Color.secondary).font(.title3)
                 }
             }.padding(14).appCard().padding(.horizontal, 16).padding(.top, 12)
 

@@ -93,7 +93,7 @@ struct LiquidPillNavigation: View {
                         Image(systemName: items[index].1).font(.system(size: 17, weight: .semibold))
                         Text(items[index].0).font(.system(size: 9.5, weight: .semibold)).lineLimit(1)
                     }
-                    .foregroundStyle(selection == index ? .white : .primary.opacity(0.7))
+                    .foregroundStyle(selection == index ? Color.white : Color.primary.opacity(0.7))
                     .frame(maxWidth: .infinity).frame(height: 49)
                     .background {
                         if selection == index { Capsule().fill(AppPalette.accent.gradient).shadow(color: AppPalette.accent.opacity(0.28), radius: 8, y: 3).matchedGeometryEffectSafe(id: "pill-selection") }
