@@ -7,6 +7,8 @@ struct WebClassCourse: Identifiable, Codable, Hashable {
     let code: String
     let isDueSoon: Bool
     let unreadCount: Int
+    let day: String?
+    let period: Int?
 
     var id: String { code.isEmpty ? url.absoluteString : code }
 }
@@ -14,6 +16,16 @@ struct WebClassCourse: Identifiable, Codable, Hashable {
 private struct WebClassHomePayload: Codable {
     let userName: String
     let courses: [WebClassCourse]
+    let years: [WebClassOption]
+    let semesters: [WebClassOption]
+    let currentYear: String
+    let currentSemester: String
+}
+
+struct WebClassOption: Identifiable, Codable, Hashable {
+    let label: String
+    let value: String
+    var id: String { value }
 }
 
 @MainActor
@@ -30,6 +42,10 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
     @Published private(set) var userName = ""
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var years: [WebClassOption] = []
+    @Published private(set) var semesters: [WebClassOption] = []
+    @Published private(set) var currentYear = ""
+    @Published private(set) var currentSemester = ""
 
     private var requestedLogout = false
     private lazy var worker: WKWebView = {
@@ -47,13 +63,16 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
             loginState = .signedIn
             userName = "高専 太郎"
             courses = [
-                WebClassCourse(title: "情報工学", url: Self.homeURL, code: "2026-INFO", isDueSoon: true, unreadCount: 2),
-                WebClassCourse(title: "電気電子回路", url: Self.homeURL, code: "2026-EE", isDueSoon: false, unreadCount: 0),
-                WebClassCourse(title: "英語コミュニケーション", url: Self.homeURL, code: "2026-ENG", isDueSoon: false, unreadCount: 1),
-                WebClassCourse(title: "応用数学", url: Self.homeURL, code: "2026-MATH", isDueSoon: false, unreadCount: 0)
+                WebClassCourse(title: "情報工学", url: Self.homeURL, code: "2026-INFO", isDueSoon: true, unreadCount: 2, day: "月", period: 1),
+                WebClassCourse(title: "電気電子回路", url: Self.homeURL, code: "2026-EE", isDueSoon: false, unreadCount: 0, day: "火", period: 2),
+                WebClassCourse(title: "英語コミュニケーション", url: Self.homeURL, code: "2026-ENG", isDueSoon: false, unreadCount: 1, day: "水", period: 3),
+                WebClassCourse(title: "応用数学", url: Self.homeURL, code: "2026-MATH", isDueSoon: false, unreadCount: 0, day: nil, period: nil)
             ]
         } else {
-            refresh()
+            Task {
+                await WebClassCookieVault.restore()
+                refresh()
+            }
         }
     }
 
@@ -62,6 +81,16 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
         isLoading = true
         errorMessage = nil
         worker.load(URLRequest(url: Self.homeURL, cachePolicy: .reloadIgnoringLocalCacheData))
+    }
+
+    func selectSchedule(year: String? = nil, semester: String? = nil) {
+        let selectedYear = year ?? currentYear
+        let selectedSemester = semester ?? currentSemester
+        guard var components = URLComponents(url: Self.homeURL, resolvingAgainstBaseURL: false) else { return }
+        components.queryItems = [URLQueryItem(name: "year", value: selectedYear), URLQueryItem(name: "semester", value: selectedSemester)]
+        guard let url = components.url else { return }
+        isLoading = true
+        worker.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData))
     }
 
     func loginCompleted(at url: URL) {
@@ -94,11 +123,13 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
         guard let url = webView.url else { return }
 
         if requestedLogout || url.path.contains("login.php") || url.host?.contains("microsoftonline.com") == true {
+            let wasLogout = requestedLogout
             loginState = .signedOut
             courses = []
             userName = ""
             isLoading = false
             requestedLogout = false
+            if wasLogout { Task { await WebClassCookieVault.clear() } }
             return
         }
 
@@ -123,6 +154,27 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
           }
           const seen = new Set();
           const courses = [];
+          const optionData = selector => {
+            const select = document.querySelector(selector);
+            return { current: select?.value || '', values: [...(select?.options || [])].map(option => ({ label: clean(option.textContent), value: option.value })) };
+          };
+          const yearData = optionData('select[name="set_year"],select[name="year"]');
+          const semesterData = optionData('select[name="set_semester"],select[name="semester"]');
+          const schedule = new Map();
+          const table = document.querySelector('#schedule-table');
+          if (table) {
+            const header = table.querySelector('thead tr') || table.querySelector('tr');
+            const days = [...(header?.children || [])].map(cell => clean(cell.textContent).replace(/曜日/g, '').slice(0, 1));
+            [...table.querySelectorAll('tbody tr')].forEach(row => {
+              const cells = [...row.children];
+              const rawPeriod = parseInt(clean(cells[0]?.textContent).replace(/\D/g, ''), 10);
+              const period = rawPeriod ? Math.ceil(rawPeriod / 2) : null;
+              cells.forEach((cell, index) => cell.querySelectorAll('a[href*="/course.php/"]').forEach(link => {
+                const href = absolute(link.getAttribute('href'));
+                if (href) schedule.set(href, { day: days[index] || null, period });
+              }));
+            });
+          }
           document.querySelectorAll('#schedule-table a[href*="/course.php/"], .schedule-list a.course[href*="/course.php/"], a[href*="/course.php/"]').forEach(a => {
             const url = absolute(a.getAttribute('href'));
             if (!url || seen.has(url)) return;
@@ -132,9 +184,10 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
             const match = url.match(/course\.php\/([^/?#]+)/);
             const row = a.closest('tr, li, .course, .list-group-item') || a.parentElement;
             const badges = row ? [...row.querySelectorAll('.badge,.label-danger')].map(e => parseInt(e.textContent, 10) || 0) : [];
-            courses.push({ title, url, code: match ? match[1] : '', isDueSoon: /期限間近|締切間近/.test(a.textContent), unreadCount: badges.reduce((sum, value) => sum + value, 0) });
+            const slot = schedule.get(url) || {};
+            courses.push({ title, url, code: match ? match[1] : '', isDueSoon: /期限間近|締切間近/.test(a.textContent), unreadCount: badges.reduce((sum, value) => sum + value, 0), day: slot.day || null, period: slot.period || null });
           });
-          return JSON.stringify({ userName, courses });
+          return JSON.stringify({ userName, courses, years: yearData.values, semesters: semesterData.values, currentYear: yearData.current, currentSemester: semesterData.current });
         })()
         """#
 
@@ -152,7 +205,12 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
                 self.loginState = .signedIn
                 self.userName = payload.userName
                 self.courses = payload.courses
+                self.years = payload.years
+                self.semesters = payload.semesters
+                self.currentYear = payload.currentYear
+                self.currentSemester = payload.currentSemester
                 self.errorMessage = nil
+                Task { await WebClassCookieVault.save() }
             }
         }
     }

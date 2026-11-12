@@ -1,5 +1,11 @@
 import SwiftUI
 
+private struct CourseDayGroup: Identifiable {
+    let day: String
+    let courses: [WebClassCourse]
+    var id: String { day }
+}
+
 struct RootView: View {
     @State private var selection = 0
 
@@ -17,6 +23,10 @@ struct RootView: View {
                 .tabItem { Label("設定", systemImage: "person.crop.circle.fill") }.tag(4)
         }
         .tint(.indigo)
+        .toolbar(.hidden, for: .tabBar)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            LiquidPillNavigation(selection: $selection)
+        }
     }
 }
 
@@ -25,18 +35,39 @@ struct HomeView: View {
     @State private var showLogin = false
     @State private var query = ""
     @State private var filter = CourseFilter.all
+    @AppStorage("hiddenCourseIDs") private var hiddenCourseIDsValue = ""
 
     private enum CourseFilter: String, CaseIterable, Identifiable {
         case all = "すべて"
         case tasks = "期限間近"
+        case hidden = "非表示"
         var id: Self { self }
     }
+
+    private var hiddenCourseIDs: Set<String> { Set(hiddenCourseIDsValue.split(separator: "|").map(String.init)) }
 
     private var visibleCourses: [WebClassCourse] {
         session.courses.filter { course in
             let matchesQuery = query.isEmpty || course.title.localizedCaseInsensitiveContains(query) || course.code.localizedCaseInsensitiveContains(query)
-            return matchesQuery && (filter == .all || course.isDueSoon)
+            let hidden = hiddenCourseIDs.contains(course.id)
+            let matchesFilter = switch filter {
+            case .all: !hidden
+            case .tasks: !hidden && course.isDueSoon
+            case .hidden: hidden
+            }
+            return matchesQuery && matchesFilter
         }
+    }
+
+    private var groupedCourses: [CourseDayGroup] {
+        let order = ["月", "火", "水", "木", "金", "土", "日"]
+        var result = order.compactMap { day -> CourseDayGroup? in
+            let values = visibleCourses.filter { $0.day == day }.sorted { ($0.period ?? 99) < ($1.period ?? 99) }
+            return values.isEmpty ? nil : CourseDayGroup(day: "\(day)曜日", courses: values)
+        }
+        let other = visibleCourses.filter { course in !order.contains(course.day ?? "") }
+        if !other.isEmpty { result.append(CourseDayGroup(day: "その他", courses: other)) }
+        return result
     }
 
     var body: some View {
@@ -81,20 +112,23 @@ struct HomeView: View {
                 if session.isLoading && session.courses.isEmpty {
                     ForEach(0..<5, id: \.self) { _ in RoundedRectangle(cornerRadius: 18).fill(.quaternary).frame(height: 92) }
                 } else {
-                    if !session.userName.isEmpty {
-                        HStack {
-                            AppIconTile(symbol: "person.crop.circle.fill", color: .indigo, size: 48)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("こんにちは").font(.caption).foregroundStyle(.secondary)
-                                Text(session.userName).font(.headline)
+                    if !session.years.isEmpty || !session.semesters.isEmpty {
+                        HStack(spacing: 10) {
+                            if !session.years.isEmpty {
+                                Menu {
+                                    ForEach(session.years) { option in Button(option.label) { session.selectSchedule(year: option.value) } }
+                                } label: {
+                                    ScheduleMenuLabel(text: session.years.first(where: { $0.value == session.currentYear })?.label ?? session.currentYear, symbol: "calendar")
+                                }
                             }
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text("\(session.courses.count)").font(.title2.bold()).foregroundStyle(.indigo)
-                                Text("コース").font(.caption2).foregroundStyle(.secondary)
+                            if !session.semesters.isEmpty {
+                                Menu {
+                                    ForEach(session.semesters) { option in Button(option.label) { session.selectSchedule(semester: option.value) } }
+                                } label: {
+                                    ScheduleMenuLabel(text: session.semesters.first(where: { $0.value == session.currentSemester })?.label ?? session.currentSemester, symbol: "rectangle.split.2x1")
+                                }
                             }
                         }
-                        .padding(15).appCard()
                     }
                     AppSectionHeader(title: "コース", subtitle: "授業・課題・教材", symbol: "graduationcap.fill")
                     HStack {
@@ -114,8 +148,15 @@ struct HomeView: View {
                     if visibleCourses.isEmpty && !session.isLoading {
                         ContentUnavailableView("コースが見つかりません", systemImage: "book.closed", description: Text(query.isEmpty ? "WebClassを再読み込みしてください。" : "検索条件を変更してください。"))
                     } else {
-                        ForEach(visibleCourses) { course in
-                            NavigationLink { CourseContentsView(course: course) } label: { CourseCard(course: course) }.buttonStyle(.plain)
+                        ForEach(groupedCourses) { group in
+                            AppSectionHeader(title: group.day, subtitle: "\(group.courses.count)件", symbol: group.day == "その他" ? "square.grid.2x2" : "calendar")
+                                .padding(.top, 5)
+                            ForEach(group.courses) { course in
+                                NavigationLink { CourseContentsView(course: course) } label: { CourseCard(course: course) }.buttonStyle(.plain)
+                                    .contextMenu {
+                                        Button(filter == .hidden ? "一覧に戻す" : "非表示にする", systemImage: filter == .hidden ? "eye" : "eye.slash") { toggleHidden(course.id) }
+                                    }
+                            }
                         }
                     }
                 }
@@ -123,6 +164,26 @@ struct HomeView: View {
         }
         .refreshable { session.refresh() }
         .appScreenBackground()
+    }
+
+    private func toggleHidden(_ id: String) {
+        var values = hiddenCourseIDs
+        if values.contains(id) { values.remove(id) } else { values.insert(id) }
+        hiddenCourseIDsValue = values.sorted().joined(separator: "|")
+    }
+}
+
+private struct ScheduleMenuLabel: View {
+    let text: String
+    let symbol: String
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: symbol)
+            Text(text.isEmpty ? "選択" : text).lineLimit(1)
+            Image(systemName: "chevron.down").font(.caption2)
+        }
+        .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+        .padding(.horizontal, 12).frame(height: 40).appCard(cornerRadius: 12)
     }
 }
 

@@ -99,6 +99,7 @@ struct WebContainer: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.scrollView.setContentOffset(.zero, animated: false)
             if let url = webView.url { parent.onNavigation?(url) }
+            if webView.url?.host == "webclass.kosen-k.go.jp" { Task { await WebClassCookieVault.save() } }
             guard parent.darkMode else { return }
             if let path = Bundle.main.path(forResource: "darkreader-4.9.134.min", ofType: "js"),
                let script = try? String(contentsOfFile: path, encoding: .utf8) {

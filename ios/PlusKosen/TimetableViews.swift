@@ -18,55 +18,79 @@ struct TimetableHubView: View {
 
 struct BusTimetableView: View {
     @State private var fromStation = true
-    @State private var holiday = false
+    @AppStorage("busDayMode") private var dayMode = 0
+    @State private var showOnlyUpcoming = false
+    @State private var now = Date.now
+    private let clock = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
-    private var departures: [BusDeparture] { BusData.departures(fromStation: fromStation, holiday: holiday) }
+    private var holiday: Bool {
+        if dayMode == 1 { return false }
+        if dayMode == 2 { return true }
+        return Calendar.current.isDateInWeekend(now)
+    }
+    private var nowMinutes: Int { let value = Calendar.current.dateComponents([.hour, .minute], from: now); return (value.hour ?? 0) * 60 + (value.minute ?? 0) }
+    private var allDepartures: [BusDeparture] { BusData.departures(fromStation: fromStation, holiday: holiday) }
+    private var nextBus: BusDeparture? { allDepartures.first { $0.minutes >= nowMinutes } }
+    private var departures: [BusDeparture] { showOnlyUpcoming ? allDepartures.filter { $0.minutes >= nowMinutes } : allDepartures }
 
     var body: some View {
         VStack(spacing: 12) {
-            VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    AppIconTile(symbol: "bus.fill", color: .green, size: 48)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(fromStation ? "木更津駅から高専" : "高専から木更津駅").font(.headline)
-                        Text(holiday ? "土休日ダイヤ" : "平日ダイヤ").font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
+            VStack(spacing: 10) {
                 Picker("方向", selection: $fromStation) {
                     Text("木更津発").tag(true)
                     Text("高専発").tag(false)
                 }.pickerStyle(.segmented)
-                Picker("曜日", selection: $holiday) {
-                    Text("平日").tag(false)
-                    Text("土休日").tag(true)
-                }.pickerStyle(.segmented)
+                HStack {
+                    Menu {
+                        Button("自動") { dayMode = 0 }
+                        Button("平日") { dayMode = 1 }
+                        Button("土休日") { dayMode = 2 }
+                    } label: {
+                        Label(dayMode == 0 ? "自動・\(holiday ? "土休日" : "平日")" : (dayMode == 1 ? "手動・平日" : "手動・土休日"), systemImage: "calendar")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                    }
+                    Spacer()
+                    Button { showOnlyUpcoming.toggle() } label: {
+                        Label("これから", systemImage: showOnlyUpcoming ? "checkmark.circle.fill" : "clock.arrow.circlepath")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(showOnlyUpcoming ? .green : .primary)
+                    }.buttonStyle(.plain)
+                }.padding(.horizontal, 5)
             }.padding(14).appCard().padding(.horizontal, 16)
 
             ScrollViewReader { proxy in
                 List(departures) { item in
+                    let isNext = item.id == nextBus?.id
+                    let isPast = item.minutes < nowMinutes
                     HStack(spacing: 14) {
-                        Text(item.label).font(.title3.monospacedDigit().weight(.bold)).foregroundStyle(.green).frame(width: 58, alignment: .leading)
+                        Text(item.label).font(.title3.monospacedDigit().weight(.bold)).foregroundStyle(isNext ? .green : .primary).frame(width: 58, alignment: .leading)
                         AppIconTile(symbol: "bus.fill", color: .green, size: 36)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(item.stop).font(.headline)
                             Text(fromStation ? "高専方面" : "木更津駅方面").font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                    }.id(item.id)
+                        if isNext {
+                            VStack(alignment: .trailing, spacing: 3) {
+                                Text("次のバス").font(.caption2.bold()).foregroundStyle(.white).padding(.horizontal, 7).padding(.vertical, 3).background(.green, in: Capsule())
+                                Text("あと\(max(0, item.minutes - nowMinutes))分").font(.caption.bold()).foregroundStyle(.green)
+                            }
+                        }
+                    }
+                    .opacity(isPast ? 0.42 : 1)
+                    .listRowBackground(isNext ? Color.green.opacity(0.11) : Color.clear)
+                    .id(item.id)
                 }
                 .listStyle(.plain).scrollContentBackground(.hidden)
                 .onAppear { scrollToNow(proxy) }
                 .onChange(of: fromStation) { scrollToNow(proxy) }
-                .onChange(of: holiday) { scrollToNow(proxy) }
+                .onChange(of: dayMode) { scrollToNow(proxy) }
+                .onChange(of: showOnlyUpcoming) { scrollToNow(proxy) }
             }
-        }.padding(.top, 4).appScreenBackground()
+        }.padding(.top, 4).appScreenBackground().onReceive(clock) { now = $0 }
     }
 
     private func scrollToNow(_ proxy: ScrollViewProxy) {
-        let parts = Calendar.current.dateComponents([.hour, .minute], from: .now)
-        let now = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
-        let target = departures.min(by: { abs($0.minutes - now) < abs($1.minutes - now) })
+        let target = nextBus ?? departures.last
         guard let target else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { withAnimation(.easeInOut) { proxy.scrollTo(target.id, anchor: .center) } }
     }
