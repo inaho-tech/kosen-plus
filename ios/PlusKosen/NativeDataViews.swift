@@ -29,15 +29,23 @@ struct SyllabusSubject: Identifiable, Hashable {
     let url: URL?
 }
 
+struct SyllabusDetailRow: Identifiable, Hashable {
+    let id: String
+    let label: String
+    let value: String
+}
+
 @MainActor
 final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
-    enum Kind { case course, departments, subjects }
+    enum Kind { case course, departments, subjects, syllabusDetail }
 
     @Published var isLoading = true
     @Published var errorMessage: String?
     @Published var courseSections: [CourseContentSection] = []
     @Published var departments: [SyllabusDepartment] = []
     @Published var subjects: [SyllabusSubject] = []
+    @Published var detailTitle = ""
+    @Published var detailRows: [SyllabusDetailRow] = []
 
     private let url: URL
     private let kind: Kind
@@ -78,6 +86,7 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
         case .course: extractCourse(from: webView)
         case .departments: extractDepartments(from: webView)
         case .subjects: extractSubjects(from: webView)
+        case .syllabusDetail: extractSyllabusDetail(from: webView)
         }
     }
 
@@ -161,6 +170,36 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
         evaluate(script) { data in
             guard let data, let values = try? JSONDecoder().decode([Payload].self, from: data) else { return }
             self.subjects = values.map { SyllabusSubject(id: $0.id, name: $0.name, detail: $0.detail, url: $0.url) }
+            self.isLoading = false
+        }
+    }
+
+    private func extractSyllabusDetail(from webView: WKWebView) {
+        let script = #"""
+        (() => {
+          const clean = value => (value || '').replace(/\s+/g, ' ').trim();
+          const title = clean(document.querySelector('h1,h2,.page-header,.subject-name')?.textContent || document.title);
+          const rows = [];
+          document.querySelectorAll('table tr').forEach((row, index) => {
+            const cells = [...row.querySelectorAll('th,td')].map(cell => clean(cell.textContent)).filter(Boolean);
+            if (cells.length >= 2) rows.push({ id: `${index}`, label: cells[0], value: cells.slice(1).join(' ・ ') });
+          });
+          document.querySelectorAll('dl').forEach((list, listIndex) => {
+            const labels = [...list.querySelectorAll('dt')];
+            labels.forEach((label, index) => {
+              const value = label.nextElementSibling?.matches('dd') ? clean(label.nextElementSibling.textContent) : '';
+              if (value) rows.push({ id: `dl-${listIndex}-${index}`, label: clean(label.textContent), value });
+            });
+          });
+          return JSON.stringify({ title, rows });
+        })()
+        """#
+        struct Payload: Decodable { let title: String; let rows: [Row] }
+        struct Row: Decodable { let id: String; let label: String; let value: String }
+        evaluate(script) { data in
+            guard let data, let value = try? JSONDecoder().decode(Payload.self, from: data) else { return }
+            self.detailTitle = value.title
+            self.detailRows = value.rows.map { SyllabusDetailRow(id: $0.id, label: $0.label, value: $0.value) }
             self.isLoading = false
         }
     }
@@ -262,11 +301,40 @@ struct SyllabusSubjectsView: View {
             else {
                 List(filtered) { subject in
                     if let url = subject.url {
-                        NavigationLink { WebClassView(startURL: url) } label: { SubjectRow(subject: subject) }
+                        NavigationLink { SyllabusDetailView(subject: subject, url: url) } label: { SubjectRow(subject: subject) }
                     } else { SubjectRow(subject: subject) }
                 }.searchable(text: $query, prompt: "科目を検索")
             }
         }.navigationTitle(department.name).navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct SyllabusDetailView: View {
+    let subject: SyllabusSubject
+    @StateObject private var loader: DOMPageLoader
+
+    init(subject: SyllabusSubject, url: URL) {
+        self.subject = subject
+        _loader = StateObject(wrappedValue: DOMPageLoader(url: url, kind: .syllabusDetail))
+    }
+
+    var body: some View {
+        Group {
+            if loader.isLoading { PlaceholderList() }
+            else if let error = loader.errorMessage { ContentUnavailableView("シラバスを取得できません", systemImage: "exclamationmark.triangle", description: Text(error)) }
+            else {
+                List {
+                    ForEach(loader.detailRows) { row in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(row.label).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            Text(row.value).textSelection(.enabled)
+                        }.padding(.vertical, 5)
+                    }
+                }
+            }
+        }
+        .navigationTitle(loader.detailTitle.isEmpty ? subject.name : loader.detailTitle)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
