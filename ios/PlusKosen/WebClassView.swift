@@ -102,11 +102,11 @@ struct WebContainer: UIViewRepresentable {
             guard parent.darkMode else { return }
             if let path = Bundle.main.path(forResource: "darkreader-4.9.134.min", ofType: "js"),
                let script = try? String(contentsOfFile: path, encoding: .utf8) {
-                let config = "DarkReader.setFetchMethod(window.fetch);DarkReader.enable({brightness:100,contrast:90,sepia:0});"
-                webView.evaluateJavaScript(script + ";" + config)
+                let config = "DarkReader.setFetchMethod(window.fetch);DarkReader.enable({brightness:100,contrast:90,sepia:0});void 0;"
+                webView.evaluateJavaScript(script + ";" + config, completionHandler: nil)
             } else {
                 let css = "html{color-scheme:dark!important;background:#000!important}body{background:#000!important;color:#e8e8e8!important}"
-                webView.evaluateJavaScript("var s=document.createElement('style');s.textContent=\(String(reflecting: css));document.head.appendChild(s)")
+                webView.evaluateJavaScript("var s=document.createElement('style');s.textContent=\(String(reflecting: css));document.head.appendChild(s);void 0;", completionHandler: nil)
             }
         }
     }

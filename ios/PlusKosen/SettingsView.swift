@@ -30,6 +30,8 @@ struct SettingsView: View {
                 NavigationLink("開発者向け設定") { DeveloperSettingsView() }
             }
         }
+        .scrollContentBackground(.hidden)
+        .appScreenBackground()
         .navigationTitle("設定")
         .confirmationDialog("WebClassからログアウトしますか？", isPresented: $confirmingLogout, titleVisibility: .visible) {
             Button("ログアウト", role: .destructive) { webClass.logout() }

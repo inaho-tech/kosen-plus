@@ -21,21 +21,45 @@ struct ToolsView: View {
 
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 12)], spacing: 12) {
+            LazyVStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 14) {
+                    AppIconTile(symbol: "hammer.fill", color: .indigo, size: 54)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("ツール").font(.title2.bold())
+                        Text("学習・撮影・計算・ゲーム").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(15).appCard()
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 12)], spacing: 12) {
                 ForEach(tools) { tool in
                     NavigationLink(value: tool) {
                         VStack(alignment: .leading, spacing: 10) {
-                            Image(systemName: tool.symbol).font(.title2).foregroundStyle(.indigo)
+                            AppIconTile(symbol: tool.symbol, color: toolColor(tool.id), size: 44)
                             Text(tool.title).font(.headline).foregroundStyle(.primary)
                             Text(tool.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                        }.frame(maxWidth: .infinity, minHeight: 108, alignment: .topLeading)
-                            .padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                        }.frame(maxWidth: .infinity, minHeight: 122, alignment: .topLeading)
+                            .padding(14).appCard()
                     }
+                }
                 }
             }.padding()
         }
-        .navigationTitle("ツール")
+        .appScreenBackground()
+        .toolbar(.hidden, for: .navigationBar)
         .navigationDestination(for: ToolDestination.self) { ToolRouter(id: $0.id, title: $0.title) }
+    }
+
+    private func toolColor(_ id: String) -> Color {
+        switch id {
+        case "camera": .blue
+        case "attendance": .green
+        case "library": .brown
+        case "reaction": .orange
+        case "kmap", "unit": .purple
+        case "pomodoro", "stopwatch": .red
+        case "todo": .teal
+        default: .indigo
+        }
     }
 }
 

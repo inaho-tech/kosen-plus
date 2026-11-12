@@ -3,6 +3,11 @@ import Foundation
 actor TrainService {
     private let baseURL = URL(string: "https://doko-train.jp/json")!
 
+    private struct DiagramEnvelope: Decodable {
+        let departures: [TrainDeparture]
+        enum CodingKeys: String, CodingKey { case departures = "ST_DIAGRAM" }
+    }
+
     func stations(forceRefresh: Bool = false) async throws -> [TrainStation] {
         let cache = URL.cachesDirectory.appending(path: "dokotrain-stations.json")
         let data: Data
@@ -22,11 +27,11 @@ actor TrainService {
 
     func departures(station: TrainStation, direction: String) async throws -> [TrainDeparture] {
         let path = "diagram/station/\(station.dokoLineID)/\(station.stationID)_\(direction).json"
-        let data = try await URLSession.shared.data(from: baseURL.appending(path: path)).0
-        let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        let list = root?["ST_DIAGRAM"] as? [[String: Any]] ?? []
-        let encoded = try JSONSerialization.data(withJSONObject: list)
-        return try JSONDecoder().decode([TrainDeparture].self, from: encoded)
+        let (data, response) = try await URLSession.shared.data(from: baseURL.appending(path: path))
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(DiagramEnvelope.self, from: data).departures
             .filter { !($0.departureTime ?? "").isEmpty && $0.runType != 6 }
             .sorted { ($0.departureEpoch ?? 0) < ($1.departureEpoch ?? 0) }
     }

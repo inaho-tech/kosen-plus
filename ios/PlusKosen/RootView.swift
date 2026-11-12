@@ -83,13 +83,26 @@ struct HomeView: View {
                 } else {
                     if !session.userName.isEmpty {
                         HStack {
-                            Image(systemName: "person.crop.circle.fill").foregroundStyle(.indigo)
-                            Text(session.userName).font(.headline)
+                            AppIconTile(symbol: "person.crop.circle.fill", color: .indigo, size: 48)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("こんにちは").font(.caption).foregroundStyle(.secondary)
+                                Text(session.userName).font(.headline)
+                            }
                             Spacer()
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("\(session.courses.count)").font(.title2.bold()).foregroundStyle(.indigo)
+                                Text("コース").font(.caption2).foregroundStyle(.secondary)
+                            }
                         }
-                        .padding(14).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                        .padding(15).appCard()
                     }
-                    TextField("コース名やIDで検索", text: $query).textFieldStyle(.roundedBorder)
+                    AppSectionHeader(title: "コース", subtitle: "授業・課題・教材", symbol: "graduationcap.fill")
+                    HStack {
+                        Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                        TextField("コース名やIDで検索", text: $query)
+                        if !query.isEmpty { Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) } }
+                    }
+                    .padding(.horizontal, 13).frame(height: 48).appCard(cornerRadius: 14)
                     Picker("表示", selection: $filter) {
                         ForEach(CourseFilter.allCases) { Text($0.rawValue).tag($0) }
                     }.pickerStyle(.segmented)
@@ -106,32 +119,37 @@ struct HomeView: View {
                         }
                     }
                 }
-            }.padding()
+            }.padding(16)
         }
         .refreshable { session.refresh() }
+        .appScreenBackground()
     }
 }
 
 private struct CourseCard: View {
     let course: WebClassCourse
+    private var appearance: CourseAppearance { .course(course.title) }
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: course.isDueSoon ? "exclamationmark.clock.fill" : "book.closed.fill")
-                .font(.title3).foregroundStyle(course.isDueSoon ? .orange : .indigo)
+            Image(systemName: appearance.symbol)
+                .font(.title3).foregroundStyle(appearance.color)
                 .frame(width: 46, height: 46)
-                .background((course.isDueSoon ? Color.orange : Color.indigo).opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
+                .background(appearance.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
             VStack(alignment: .leading, spacing: 5) {
                 Text(course.title).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading)
                 if !course.code.isEmpty { Text(course.code).font(.caption).foregroundStyle(.secondary) }
             }
             Spacer()
+            if course.isDueSoon {
+                Image(systemName: "exclamationmark.clock.fill").foregroundStyle(.orange)
+            }
             if course.unreadCount > 0 {
                 Text("\(course.unreadCount)").font(.caption.bold()).foregroundStyle(.white)
                     .padding(.horizontal, 7).padding(.vertical, 3).background(.red, in: Capsule())
             }
             Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
         }
-        .padding(15).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))
+        .padding(15).appCard()
     }
 }
 

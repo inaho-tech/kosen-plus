@@ -37,7 +37,7 @@ struct TrainDeparture: Codable, Identifiable, Hashable {
     let liveDelay: String?
     let liveCanceled: String?
 
-    var id: String { "\(trainID ?? UUID().uuidString)-\(departureTime ?? "")" }
+    var id: String { "\(trainID ?? destination ?? "train")-\(departureTime ?? "")" }
     var isCancelled: Bool { cancelFlag == "T" || suspensionFlag == "1" || liveCanceled == "1" }
 
     enum CodingKeys: String, CodingKey {
@@ -45,6 +45,64 @@ struct TrainDeparture: Codable, Identifiable, Hashable {
         case destination = "END_STATION", trainName = "TRAIN_NNAME", cars = "UNIT_INFO"
         case runType = "RUN_TYPE", cancelFlag = "CANCEL_FLAG", suspensionFlag = "SSPNSN_FLAG"
         case liveDelay = "ad_latency", liveCanceled = "ad_canceled"
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        departureTime = try values.decodeFlexibleStringIfPresent(forKey: .departureTime)
+        departureEpoch = try values.decodeFlexibleInt64IfPresent(forKey: .departureEpoch)
+        trainID = try values.decodeFlexibleStringIfPresent(forKey: .trainID)
+        destination = try values.decodeFlexibleStringIfPresent(forKey: .destination)
+        trainName = try values.decodeFlexibleStringIfPresent(forKey: .trainName)
+        cars = try values.decodeFlexibleStringIfPresent(forKey: .cars)
+        runType = try values.decodeFlexibleIntIfPresent(forKey: .runType)
+        cancelFlag = try values.decodeFlexibleStringIfPresent(forKey: .cancelFlag)
+        suspensionFlag = try values.decodeFlexibleStringIfPresent(forKey: .suspensionFlag)
+        liveDelay = try values.decodeFlexibleStringIfPresent(forKey: .liveDelay)
+        liveCanceled = try values.decodeFlexibleStringIfPresent(forKey: .liveCanceled)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encodeIfPresent(departureTime, forKey: .departureTime)
+        try values.encodeIfPresent(departureEpoch, forKey: .departureEpoch)
+        try values.encodeIfPresent(trainID, forKey: .trainID)
+        try values.encodeIfPresent(destination, forKey: .destination)
+        try values.encodeIfPresent(trainName, forKey: .trainName)
+        try values.encodeIfPresent(cars, forKey: .cars)
+        try values.encodeIfPresent(runType, forKey: .runType)
+        try values.encodeIfPresent(cancelFlag, forKey: .cancelFlag)
+        try values.encodeIfPresent(suspensionFlag, forKey: .suspensionFlag)
+        try values.encodeIfPresent(liveDelay, forKey: .liveDelay)
+        try values.encodeIfPresent(liveCanceled, forKey: .liveCanceled)
+    }
+}
+
+private extension KeyedDecodingContainer {
+    func decodeFlexibleStringIfPresent(forKey key: Key) throws -> String? {
+        guard contains(key) else { return nil }
+        if try decodeNil(forKey: key) { return nil }
+        if let value = try? decode(String.self, forKey: key) { return value }
+        if let value = try? decode(Int64.self, forKey: key) { return String(value) }
+        if let value = try? decode(Double.self, forKey: key) { return String(value) }
+        if let value = try? decode(Bool.self, forKey: key) { return value ? "1" : "0" }
+        return nil
+    }
+
+    func decodeFlexibleIntIfPresent(forKey key: Key) throws -> Int? {
+        guard contains(key) else { return nil }
+        if try decodeNil(forKey: key) { return nil }
+        if let value = try? decode(Int.self, forKey: key) { return value }
+        if let value = try? decode(String.self, forKey: key) { return Int(value) }
+        return nil
+    }
+
+    func decodeFlexibleInt64IfPresent(forKey key: Key) throws -> Int64? {
+        guard contains(key) else { return nil }
+        if try decodeNil(forKey: key) { return nil }
+        if let value = try? decode(Int64.self, forKey: key) { return value }
+        if let value = try? decode(String.self, forKey: key) { return Int64(value) }
+        return nil
     }
 }
 

@@ -106,23 +106,26 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
 
     private func extractCourse(from webView: WKWebView) {
         let script = #"""
-        (() => JSON.stringify([...document.querySelectorAll('.cl-contentsList_folder')].map((folder, sectionIndex) => ({
-          id: folder.id || `section-${sectionIndex}`,
-          title: (folder.querySelector('.panel-title')?.textContent || '教材').replace(/\s+/g, ' ').trim(),
-          items: [...folder.querySelectorAll('.cl-contentsList_listGroupItem')].map((item, itemIndex) => {
-            const root = item.querySelector('.cm-contentsList_contentName');
-            const link = root?.querySelector('a');
-            const href = link?.getAttribute('href');
-            return {
-              id: `${sectionIndex}-${itemIndex}`,
-              title: (link?.textContent || root?.textContent || '名称なし').replace(/\s+/g, ' ').replace(/New!?/gi, '').trim(),
-              category: (item.querySelector('.cl-contentsList_categoryLabel')?.textContent || '').trim(),
-              url: href ? new URL(href, location.href).href : null,
-              isNew: !!root?.querySelector('.cl-contentsList_new'),
-              isDisabled: !link
-            };
-          })
-        }))))
+        (() => {
+          const sections = [...document.querySelectorAll('.cl-contentsList_folder')].map((folder, sectionIndex) => ({
+            id: folder.id || `section-${sectionIndex}`,
+            title: (folder.querySelector('.panel-title')?.textContent || '教材').replace(/\s+/g, ' ').trim(),
+            items: [...folder.querySelectorAll('.cl-contentsList_listGroupItem')].map((item, itemIndex) => {
+              const root = item.querySelector('.cm-contentsList_contentName');
+              const link = root?.querySelector('a');
+              const href = link?.getAttribute('href');
+              return {
+                id: `${sectionIndex}-${itemIndex}`,
+                title: (link?.textContent || root?.textContent || '名称なし').replace(/\s+/g, ' ').replace(/New!?/gi, '').trim(),
+                category: (item.querySelector('.cl-contentsList_categoryLabel')?.textContent || '').trim(),
+                url: href ? new URL(href, location.href).href : null,
+                isNew: !!root?.querySelector('.cl-contentsList_new'),
+                isDisabled: !link
+              };
+            })
+          }));
+          return JSON.stringify(sections);
+        })()
         """#
         struct Payload: Decodable { let id: String; let title: String; let items: [Item] }
         struct Item: Decodable { let id: String; let title: String; let category: String; let url: URL?; let isNew: Bool; let isDisabled: Bool }
@@ -235,14 +238,19 @@ struct CourseContentsView: View {
             }
         }
         .navigationTitle(course.title).navigationBarTitleDisplayMode(.inline)
+        .appScreenBackground()
     }
 }
 
 private struct ContentRow: View {
     let item: CourseContentItem
+    private var appearance: CourseAppearance { .assignment(item.category) }
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "doc.text.fill").foregroundStyle(.indigo).frame(width: 28)
+            Image(systemName: appearance.symbol)
+                .foregroundStyle(appearance.color)
+                .frame(width: 38, height: 38)
+                .background(appearance.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
             VStack(alignment: .leading, spacing: 3) {
                 HStack { Text(item.title); if item.isNew { Text("NEW").font(.caption2.bold()).foregroundStyle(.red) } }
                 if !item.category.isEmpty { Text(item.category).font(.caption).foregroundStyle(.secondary) }
@@ -254,7 +262,7 @@ private struct ContentRow: View {
 private struct PlaceholderList: View {
     var body: some View {
         List(0..<6, id: \.self) { _ in RoundedRectangle(cornerRadius: 10).fill(.quaternary).frame(height: 52) }
-            .redacted(reason: .placeholder).allowsHitTesting(false)
+            .redacted(reason: .placeholder).allowsHitTesting(false).scrollContentBackground(.hidden).appScreenBackground()
     }
 }
 
@@ -272,11 +280,30 @@ struct SyllabusView: View {
             if loader.isLoading { PlaceholderList() }
             else if let error = loader.errorMessage { ContentUnavailableView("シラバスを取得できません", systemImage: "exclamationmark.triangle", description: Text(error)) }
             else {
-                List(filtered) { department in
-                    NavigationLink { SyllabusSubjectsView(department: department) } label: {
-                        Label(department.name, systemImage: "building.columns.fill").padding(.vertical, 5)
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        HStack(spacing: 14) {
+                            AppIconTile(symbol: "doc.text.fill", color: .orange, size: 54)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("高専Webシラバス").font(.title2.bold())
+                                Text("学科を選んで授業計画を確認").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }.padding(15).appCard()
+                        AppSectionHeader(title: "学科", subtitle: "\(filtered.count)件", symbol: "building.columns.fill")
+                        ForEach(filtered) { department in
+                            NavigationLink { SyllabusSubjectsView(department: department) } label: {
+                                HStack(spacing: 13) {
+                                    AppIconTile(symbol: "building.columns.fill", color: .orange)
+                                    Text(department.name).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading)
+                                    Spacer()
+                                    Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                                }.padding(13).appCard()
+                            }.buttonStyle(.plain)
+                        }
                     }
-                }.searchable(text: $query, prompt: "学科を検索").refreshable { loader.reload() }
+                    .padding(16)
+                }.searchable(text: $query, prompt: "学科を検索").refreshable { loader.reload() }.appScreenBackground()
             }
         }.navigationTitle("シラバス")
     }
@@ -299,11 +326,16 @@ struct SyllabusSubjectsView: View {
             if loader.isLoading { PlaceholderList() }
             else if let error = loader.errorMessage { ContentUnavailableView("科目を取得できません", systemImage: "exclamationmark.triangle", description: Text(error)) }
             else {
-                List(filtered) { subject in
-                    if let url = subject.url {
-                        NavigationLink { SyllabusDetailView(subject: subject, url: url) } label: { SubjectRow(subject: subject) }
-                    } else { SubjectRow(subject: subject) }
-                }.searchable(text: $query, prompt: "科目を検索")
+                ScrollView {
+                    LazyVStack(spacing: 11) {
+                        AppSectionHeader(title: "科目", subtitle: "\(filtered.count)件", symbol: "books.vertical.fill")
+                        ForEach(filtered) { subject in
+                            if let url = subject.url {
+                                NavigationLink { SyllabusDetailView(subject: subject, url: url) } label: { SubjectRow(subject: subject).padding(13).appCard() }.buttonStyle(.plain)
+                            } else { SubjectRow(subject: subject).padding(13).appCard() }
+                        }
+                    }.padding(16)
+                }.searchable(text: $query, prompt: "科目を検索").appScreenBackground()
             }
         }.navigationTitle(department.name).navigationBarTitleDisplayMode(.inline)
     }
@@ -330,20 +362,26 @@ struct SyllabusDetailView: View {
                             Text(row.value).textSelection(.enabled)
                         }.padding(.vertical, 5)
                     }
-                }
+                }.scrollContentBackground(.hidden)
             }
         }
         .navigationTitle(loader.detailTitle.isEmpty ? subject.name : loader.detailTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .appScreenBackground()
     }
 }
 
 private struct SubjectRow: View {
     let subject: SyllabusSubject
+    private var appearance: CourseAppearance { .course(subject.name) }
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(subject.name).font(.headline)
-            if !subject.detail.isEmpty { Text(subject.detail).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+        HStack(spacing: 12) {
+            Image(systemName: appearance.symbol).foregroundStyle(appearance.color)
+                .frame(width: 42, height: 42).background(appearance.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            VStack(alignment: .leading, spacing: 5) {
+                Text(subject.name).font(.headline)
+                if !subject.detail.isEmpty { Text(subject.detail).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+            }
         }.padding(.vertical, 4)
     }
 }
