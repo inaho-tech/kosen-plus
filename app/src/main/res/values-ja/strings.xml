@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kosen+</string>
+    
+    <!-- Bottom Navigation -->
+    <string name="nav_home">学習</string>
+    <string name="nav_bookmarks">ブックマーク</string>
+    <string name="nav_user">マイページ</string>
+    <string name="nav_settings">設定</string>
+    <string name="nav_bus">時刻表</string>
+    <string name="nav_syllabus">シラバス</string>
+    <string name="nav_tools">ツール</string>
+    
+    <!-- Theme Names -->
+    <string name="theme_light">ライト</string>
+    <string name="theme_dark">ダーク</string>
+    <string name="theme_pastel">パステル</string>
+    
+    <!-- Common -->
+    <string name="loading">読み込み中…</string>
+    <string name="error">エラーが発生しました</string>
+    <string name="retry">再試行</string>
+
+    <!-- ExoPlayer UI Overrides -->
+    <string name="exo_controls_play_description">再生</string>
+    <string name="exo_controls_pause_description">一時停止</string>
+    <string name="exo_controls_rewind_description">5秒戻る</string>
+    <string name="exo_controls_fastforward_description">15秒進む</string>
+    <string name="exo_controls_seek_bar_description">シークバー</string>
+    <string name="exo_controls_settings_description">設定</string>
+    <string name="exo_controls_overflow_hide_description">設定を閉じる</string>
+    <string name="exo_controls_overflow_show_description">その他の設定</string>
+    <string name="exo_controls_fullscreen_enter_description">全画面表示</string>
+    <string name="exo_controls_fullscreen_exit_description">全画面終了</string>
+    <string name="exo_controls_playback_speed">再生速度</string>
+    <string name="exo_controls_speed_normal">標準</string>
+    <string name="exo_track_selection_title_video">映像</string>
+    <string name="exo_track_selection_title_audio">音声</string>
+    <string name="exo_track_selection_title_text">字幕</string>
+    <string name="exo_track_selection_none">なし</string>
+    <string name="exo_track_selection_auto">自動</string>
+    <string name="exo_track_unknown">不明</string>
+    <string name="exo_track_resolution">%1$d × %2$d</string>
+    <string name="exo_track_bitrate">%1$.2f Mbps</string>
+    <string name="exo_track_mono">モノラル</string>
+    <string name="exo_track_stereo">ステレオ</string>
+    <string name="exo_track_surround">サラウンド</string>
+    <string name="exo_track_surround_5_point_1">5.1ch</string>
+    <string name="exo_track_surround_7_point_1">7.1ch</string>
+    <string name="exo_track_role_alternate">代替</string>
+    <string name="exo_track_role_supplementary">補足</string>
+    <string name="exo_track_role_commentary">解説</string>
+    <string name="exo_track_role_closed_captions">CC</string>
+    <string name="exo_item_list_parent_item_text">%1$s</string>
+    <string name="exo_item_list_item_text">%1$s</string>
+</resources>

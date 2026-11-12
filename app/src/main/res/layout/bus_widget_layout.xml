@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToOutline="true">
+
+    <!-- Background card -->
+    <ImageView
+        android:id="@+id/widget_bg_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/widget_background"
+        android:scaleType="fitXY" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- ===== Header ===== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingBottom="8dp">
+
+            <!-- Bus Icon -->
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_shortcut_bus"
+                android:contentDescription="Bus Icon"
+                android:tint="@color/widget_on_surface_variant"
+                android:layout_marginEnd="6dp" />
+
+            <!-- Title -->
+            <TextView
+                android:id="@+id/widget_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="バス時刻表"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/widget_on_surface"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.01" />
+
+            <!-- Update time stamp -->
+            <TextView
+                android:id="@+id/widget_update_time"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="--:-- 更新"
+                android:textSize="10sp"
+                android:textColor="@color/widget_on_surface_variant"
+                android:gravity="start|center_vertical"
+                android:layout_marginStart="8dp"
+                android:alpha="0.7" />
+
+            <!-- Refresh Button -->
+            <ImageView
+                android:id="@+id/widget_refresh"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_refresh"
+                android:tint="@color/widget_primary"
+                android:contentDescription="Refresh"
+                android:padding="4dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:layout_marginEnd="8dp" />
+
+            <!-- Day type badge -->
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                
+                <ImageView
+                    android:id="@+id/widget_day_type_bg"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/widget_badge_neutral"
+                    android:scaleType="fitXY" />
+
+                <TextView
+                    android:id="@+id/widget_day_type"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="平日"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/widget_on_primary_container"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- ===== Two-column Content Section ===== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <!-- ────── Left: Kosen Section ────── -->
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp">
+                
+                <ImageView
+                    android:id="@+id/kosen_section_bg"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/widget_section_background"
+                    android:scaleType="fitXY" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+
+                    <!-- Section label -->
+                    <TextView
+                        android:id="@+id/kosen_section_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="高専 発"
+                        android:textSize="10sp"
+                        android:textColor="@color/widget_on_surface_variant"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.04"
+                        android:paddingBottom="6dp" />
+
+                    <!-- Front gate -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingBottom="4dp">
+
+                        <FrameLayout
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="6dp">
+
+                            <ImageView
+                                android:id="@+id/kosen_front_badge_bg"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:src="@drawable/widget_badge_neutral"
+                                android:scaleType="fitXY" />
+
+                            <TextView
+                                android:id="@+id/kosen_front_badge_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:text="表"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="#FFFFFF" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/kosen_front_remaining"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="あと 5分"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/widget_primary"
+                                android:singleLine="true"
+                                android:ellipsize="end" />
+
+                            <TextView
+                                android:id="@+id/kosen_front_time"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="(15:30)"
+                                android:textSize="10sp"
+                                android:textColor="@color/widget_on_surface_variant"
+                                android:alpha="0.8" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Back gate -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <FrameLayout
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="6dp">
+
+                            <ImageView
+                                android:id="@+id/kosen_back_badge_bg"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:src="@drawable/widget_badge_neutral"
+                                android:scaleType="fitXY" />
+
+                            <TextView
+                                android:id="@+id/kosen_back_badge_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:text="裏"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="#FFFFFF" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/kosen_back_remaining"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="本日終了"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/widget_primary"
+                                android:singleLine="true"
+                                android:ellipsize="end" />
+
+                            <TextView
+                                android:id="@+id/kosen_back_time"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="--:--"
+                                android:textSize="10sp"
+                                android:textColor="@color/widget_on_surface_variant"
+                                android:alpha="0.8" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </FrameLayout>
+
+            <!-- ────── Right: Station Section ────── -->
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp">
+                
+                <ImageView
+                    android:id="@+id/station_section_bg"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/widget_section_background"
+                    android:scaleType="fitXY" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+
+                    <!-- Section label -->
+                    <TextView
+                        android:id="@+id/station_section_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="木更津駅 発"
+                        android:textSize="10sp"
+                        android:textColor="@color/widget_on_surface_variant"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.04"
+                        android:paddingBottom="6dp" />
+
+                    <!-- East exit -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingBottom="4dp">
+
+                        <FrameLayout
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="6dp">
+
+                            <ImageView
+                                android:id="@+id/station_east_badge_bg"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:src="@drawable/widget_badge_neutral"
+                                android:scaleType="fitXY" />
+
+                            <TextView
+                                android:id="@+id/station_east_badge_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:text="東"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="#FFFFFF" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/station_east_remaining"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="あと 25分"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/widget_primary"
+                                android:singleLine="true"
+                                android:ellipsize="end" />
+
+                            <TextView
+                                android:id="@+id/station_east_time"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="(15:50)"
+                                android:textSize="10sp"
+                                android:textColor="@color/widget_on_surface_variant"
+                                android:alpha="0.8" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- West exit -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <FrameLayout
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="6dp">
+
+                            <ImageView
+                                android:id="@+id/station_west_badge_bg"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:src="@drawable/widget_badge_neutral"
+                                android:scaleType="fitXY" />
+
+                            <TextView
+                                android:id="@+id/station_west_badge_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:text="西"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="#FFFFFF" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/station_west_remaining"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="あと 40分"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/widget_primary"
+                                android:singleLine="true"
+                                android:ellipsize="end" />
+
+                            <TextView
+                                android:id="@+id/station_west_time"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="(16:05)"
+                                android:textSize="10sp"
+                                android:textColor="@color/widget_on_surface_variant"
+                                android:alpha="0.8" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </FrameLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
