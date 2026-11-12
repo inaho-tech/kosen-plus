@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var settings: AppSettings
+    @EnvironmentObject private var webClass: WebClassSession
+    @State private var confirmingLogout = false
     var body: some View {
         Form {
             Section("表示") {
@@ -13,8 +15,12 @@ struct SettingsView: View {
                 Toggle("ウェブビューもダークモードにする", isOn: $settings.webViewDarkMode)
             }
             Section("WebClass") {
-                NavigationLink("WebClassを開く") { WebClassView(startURL: URL(string: "https://webclass.kosen-k.go.jp/webclass/")!) }
                 NavigationLink("メッセージ") { WebClassView(startURL: URL(string: "https://webclass.kosen-k.go.jp/webclass/messages.php/inbox")!) }
+                if webClass.loginState == .signedIn {
+                    Button("ログアウト", role: .destructive) { confirmingLogout = true }
+                } else {
+                    LabeledContent("ログイン状態", value: "未ログイン")
+                }
             }
             Section("情報") {
                 LabeledContent("バージョン", value: "4.5.2 (31)")
@@ -23,7 +29,14 @@ struct SettingsView: View {
             Section("開発者設定") {
                 NavigationLink("開発者向け設定") { DeveloperSettingsView() }
             }
-        }.navigationTitle("設定")
+        }
+        .navigationTitle("設定")
+        .confirmationDialog("WebClassからログアウトしますか？", isPresented: $confirmingLogout, titleVisibility: .visible) {
+            Button("ログアウト", role: .destructive) { webClass.logout() }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("WebClassのセッションを終了します。Microsoftアカウントのパスワードはアプリに保存されていません。")
+        }
     }
 }
 

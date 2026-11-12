@@ -3,11 +3,13 @@ import SwiftUI
 @main
 struct PlusKosenApp: App {
     @StateObject private var settings = AppSettings()
+    @StateObject private var webClass = WebClassSession()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(settings)
+                .environmentObject(webClass)
                 .preferredColorScheme(settings.colorScheme)
         }
     }

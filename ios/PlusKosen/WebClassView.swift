@@ -4,13 +4,14 @@ import QuickLook
 
 struct WebClassView: View {
     let startURL: URL
+    var onNavigation: ((URL) -> Void)? = nil
     @EnvironmentObject private var settings: AppSettings
     @AppStorage("customWebClassUI") private var customWebClassUI = false
     @State private var progress = 0.0
     @State private var title = ""
 
     var body: some View {
-        WebContainer(url: startURL, darkMode: settings.webViewDarkMode, preferMobileCourseUI: customWebClassUI, progress: $progress, pageTitle: $title)
+        WebContainer(url: startURL, darkMode: settings.webViewDarkMode, preferMobileCourseUI: customWebClassUI, progress: $progress, pageTitle: $title, onNavigation: onNavigation)
             .background(settings.webViewDarkMode ? Color.black : Color(.systemBackground))
             .navigationTitle(title.isEmpty ? "WebClass" : title)
             .navigationBarTitleDisplayMode(.inline)
@@ -23,6 +24,7 @@ struct WebContainer: UIViewRepresentable {
     let preferMobileCourseUI: Bool
     @Binding var progress: Double
     @Binding var pageTitle: String
+    var onNavigation: ((URL) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -96,6 +98,7 @@ struct WebContainer: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.scrollView.setContentOffset(.zero, animated: false)
+            if let url = webView.url { parent.onNavigation?(url) }
             guard parent.darkMode else { return }
             if let path = Bundle.main.path(forResource: "darkreader-4.9.134.min", ofType: "js"),
                let script = try? String(contentsOfFile: path, encoding: .utf8) {

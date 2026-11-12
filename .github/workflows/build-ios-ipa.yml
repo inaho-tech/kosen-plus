@@ -18,6 +18,38 @@ jobs:
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
+      - name: Compile for iOS Simulator
+        working-directory: ios
+        run: >-
+          xcodebuild
+          -project PlusKosen.xcodeproj
+          -scheme PlusKosen
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath simulator-build
+          CODE_SIGNING_ALLOWED=NO
+          build
+      - name: Capture Simulator preview
+        working-directory: ios
+        run: |
+          DEVICE_ID="$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | contains("iPhone"))][0].udid')"
+          test -n "$DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          APP_PATH="$(find simulator-build/Build/Products/Debug-iphonesimulator -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$APP_PATH"
+          xcrun simctl install "$DEVICE_ID" "$APP_PATH"
+          xcrun simctl launch "$DEVICE_ID" com.webclass.plus.ios --args -ui-preview
+          sleep 3
+          mkdir -p preview-artifacts
+          xcrun simctl io "$DEVICE_ID" screenshot preview-artifacts/home.png
+      - name: Upload Simulator preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlusKosen-iOS-preview
+          path: ios/preview-artifacts/home.png
+          if-no-files-found: error
       - name: Build unsigned device app
         working-directory: ios
         run: >-
