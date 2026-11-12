@@ -65,8 +65,8 @@ struct ToolRouter: View {
         Group {
             switch id {
             case "camera": SilentCameraView()
-            case "attendance": WebClassView(startURL: URL(string: "https://webclass.kosen-k.go.jp/webclass/")!)
-            case "library": WebClassView(startURL: URL(string: "https://libopac3-c.nagaokaut.ac.jp/opac/opac_search/")!)
+            case "attendance": WebClassView(startURL: URL(string: "https://std.kisarazu.ac.jp/")!)
+            case "library": WebClassView(startURL: URL(string: "https://libopac-c.kosen-k.go.jp/webopac15/cattab.do")!)
             case "reaction": ReactionView()
             case "pomodoro": TimerToolView(minutes: 25, title: "ポモドーロ")
             case "stopwatch": StopwatchView()

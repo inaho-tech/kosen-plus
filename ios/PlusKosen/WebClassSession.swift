@@ -50,6 +50,7 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
     private var requestedLogout = false
     private var isStartingSession = false
     private var attemptedSilentLogin = false
+    private var authenticationStep = 0
     private var startupAttempt = UUID()
     private lazy var worker: WKWebView = {
         let configuration = WKWebViewConfiguration()
@@ -80,14 +81,14 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
     }
 
     private func beginStartup(restoredCookies: Bool) {
-        isStartingSession = restoredCookies
+        isStartingSession = true
         attemptedSilentLogin = false
+        authenticationStep = 0
         let attempt = UUID()
         startupAttempt = attempt
         refresh()
-        guard restoredCookies else { return }
         Task {
-            try? await Task.sleep(for: .seconds(12))
+            try? await Task.sleep(for: .seconds(restoredCookies ? 30 : 20))
             guard startupAttempt == attempt, loginState == .checking else { return }
             isStartingSession = false
             isLoading = false
@@ -153,13 +154,29 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
             return
         }
 
-        if isStartingSession && url.path.contains("login.php") && !attemptedSilentLogin {
-            attemptedSilentLogin = true
+        if url.path.contains("logout.php"), authenticationStep == 1 {
+            authenticationStep = 2
             worker.load(URLRequest(url: Self.loginURL, cachePolicy: .reloadIgnoringLocalCacheData))
             return
         }
 
-        if isStartingSession && url.host?.contains("microsoftonline.com") == true {
+        if url.path.contains("login.php") && !attemptedSilentLogin {
+            isStartingSession = true
+            attemptedSilentLogin = true
+            authenticationStep = 1
+            loginState = .checking
+            startAuthenticationGracePeriod()
+            worker.load(URLRequest(url: Self.logoutURL, cachePolicy: .reloadIgnoringLocalCacheData))
+            return
+        }
+
+        if url.path.contains("login.php"), authenticationStep == 2 {
+            authenticationStep = 3
+            worker.load(URLRequest(url: Self.homeURL, cachePolicy: .reloadIgnoringLocalCacheData))
+            return
+        }
+
+        if isStartingSession && (url.path.contains("login.php") || url.host?.contains("microsoftonline.com") == true) {
             return
         }
 
@@ -180,6 +197,8 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
         }
 
         isStartingSession = false
+        attemptedSilentLogin = false
+        authenticationStep = 0
         startupAttempt = UUID()
 
         let script = #"""
@@ -253,6 +272,18 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
                 self.errorMessage = nil
                 Task { await WebClassCookieVault.save() }
             }
+        }
+    }
+
+    private func startAuthenticationGracePeriod() {
+        let attempt = UUID()
+        startupAttempt = attempt
+        Task {
+            try? await Task.sleep(for: .seconds(30))
+            guard startupAttempt == attempt, isStartingSession else { return }
+            isStartingSession = false
+            isLoading = false
+            loginState = .signedOut
         }
     }
 }

@@ -115,18 +115,17 @@ struct HomeView: View {
                                     ForEach(session.years) { option in Button(option.label) { session.selectSchedule(year: option.value) } }
                                 } label: {
                                     ScheduleMenuLabel(text: session.years.first(where: { $0.value == session.currentYear })?.label ?? session.currentYear, symbol: "calendar")
-                                }
+                                }.frame(maxWidth: .infinity)
                             }
                             if !session.semesters.isEmpty {
                                 Menu {
                                     ForEach(session.semesters) { option in Button(option.label) { session.selectSchedule(semester: option.value) } }
                                 } label: {
                                     ScheduleMenuLabel(text: session.semesters.first(where: { $0.value == session.currentSemester })?.label ?? session.currentSemester, symbol: "rectangle.split.2x1")
-                                }
+                                }.frame(maxWidth: .infinity)
                             }
                         }
                     }
-                    AppSectionHeader(title: "コース", subtitle: "授業・課題・教材", symbol: "graduationcap.fill")
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                         TextField("コース名やIDで検索", text: $query)
@@ -179,7 +178,7 @@ private struct ScheduleMenuLabel: View {
             Image(systemName: "chevron.down").font(.caption2)
         }
         .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-        .padding(.horizontal, 12).frame(height: 40).appCard(cornerRadius: 12)
+        .padding(.horizontal, 14).frame(maxWidth: .infinity).frame(height: 44).appCard(cornerRadius: 12).contentShape(Rectangle())
     }
 }
 

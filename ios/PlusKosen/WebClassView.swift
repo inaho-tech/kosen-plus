@@ -57,15 +57,22 @@ struct WebContainer: UIViewRepresentable {
     }
 
     private static let darkReaderSource: String? = {
-        guard let path = Bundle.main.path(forResource: "darkreader-4.9.134.min", ofType: "js") else { return nil }
-        return try? String(contentsOfFile: path, encoding: .utf8)
+        let exact = Bundle.main.url(forResource: "darkreader-4.9.134.min", withExtension: "js")
+        let discovered = Bundle.main.resourceURL.flatMap { root -> URL? in
+            guard let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) else { return nil }
+            for case let candidate as URL in enumerator where candidate.lastPathComponent == "darkreader-4.9.134.min.js" { return candidate }
+            return nil
+        }
+        guard let url = exact ?? discovered else { return nil }
+        return try? String(contentsOf: url, encoding: .utf8)
     }()
 
     private static let darkReaderEnableScript = #"""
     (() => {
       if (!window.DarkReader) return;
-      try { DarkReader.setFetchMethod(url => window.fetch(url)); } catch (_) {}
+      try { DarkReader.setFetchMethod(function(url) { return window.fetch(url); }); } catch (_) {}
       DarkReader.enable({brightness:100,contrast:90,sepia:0});
+      document.documentElement.dataset.plusKosenDarkReader = 'enabled';
     })(); void 0;
     """#
 
@@ -129,7 +136,10 @@ struct WebContainer: UIViewRepresentable {
             guard appliedDarkMode != parent.darkMode else { return }
             appliedDarkMode = parent.darkMode
             if parent.darkMode, let script = WebContainer.darkReaderSource {
-                webView.evaluateJavaScript(script + ";" + WebContainer.darkReaderEnableScript, completionHandler: nil)
+                let payload = script + ";" + WebContainer.darkReaderEnableScript
+                webView.evaluateJavaScript(payload, completionHandler: nil)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { webView.evaluateJavaScript(WebContainer.darkReaderEnableScript, completionHandler: nil) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { webView.evaluateJavaScript(WebContainer.darkReaderEnableScript, completionHandler: nil) }
             } else if parent.darkMode {
                 let css = "html{color-scheme:dark!important;background:#000!important}body{background:#000!important;color:#e8e8e8!important}"
                 webView.evaluateJavaScript("var s=document.createElement('style');s.textContent=\(String(reflecting: css));document.head.appendChild(s);void 0;", completionHandler: nil)

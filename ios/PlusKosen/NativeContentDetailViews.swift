@@ -44,6 +44,8 @@ final class NativeContentPageLoader: NSObject, ObservableObject, WKNavigationDel
 
     private let url: URL
     private let kind: Kind
+    private var authenticationStep = 0
+    private var authenticationAttempt = UUID()
     private lazy var webView: WKWebView = {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
@@ -63,6 +65,7 @@ final class NativeContentPageLoader: NSObject, ObservableObject, WKNavigationDel
     func reload() {
         isLoading = true
         errorMessage = nil
+        authenticationStep = 0
         webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData))
     }
 
@@ -72,14 +75,43 @@ final class NativeContentPageLoader: NSObject, ObservableObject, WKNavigationDel
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard let current = webView.url else { return }
-        if current.path.contains("login.php") || current.host?.contains("microsoftonline.com") == true {
-            isLoading = false
-            errorMessage = "WebClassへのログインが必要です。"
+        if handleAuthenticationRedirect(current, in: webView) {
             return
         }
+        authenticationAttempt = UUID()
+        authenticationStep = 0
         switch kind {
         case .detail: extractDetail(webView)
         case .history: extractHistory(webView)
+        }
+    }
+
+    private func handleAuthenticationRedirect(_ current: URL, in webView: WKWebView) -> Bool {
+        if current.path.contains("logout.php") {
+            authenticationStep = max(authenticationStep, 1)
+            webView.load(URLRequest(url: WebClassSession.loginURL, cachePolicy: .reloadIgnoringLocalCacheData))
+            return true
+        }
+        guard current.path.contains("login.php") || current.host?.contains("microsoftonline.com") == true else { return false }
+        if authenticationStep == 0 {
+            authenticationStep = 1
+            beginAuthenticationTimeout()
+            webView.load(URLRequest(url: WebClassSession.logoutURL, cachePolicy: .reloadIgnoringLocalCacheData))
+        } else if current.path.contains("login.php"), authenticationStep == 1 {
+            authenticationStep = 2
+            webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData))
+        }
+        return true
+    }
+
+    private func beginAuthenticationTimeout() {
+        let attempt = UUID()
+        authenticationAttempt = attempt
+        Task {
+            try? await Task.sleep(for: .seconds(20))
+            guard authenticationAttempt == attempt, authenticationStep > 0 else { return }
+            isLoading = false
+            errorMessage = "WebClassへの再ログインが必要です。ホームでログインしてから再読み込みしてください。"
         }
     }
 

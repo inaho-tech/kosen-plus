@@ -8,67 +8,60 @@ struct SettingsView: View {
     @State private var confirmingCacheClear = false
     @State private var cacheCleared = false
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 18) {
-                VStack(spacing: 10) {
+        List {
+            Section {
+                VStack(spacing: 11) {
                     Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 62)).foregroundStyle(.indigo)
-                        .frame(width: 92, height: 92)
-                        .background(.indigo.opacity(0.12), in: Circle())
-                    Text(webClass.userName.isEmpty ? "WebClass ユーザー" : webClass.userName)
-                        .font(.title2.bold()).lineLimit(1)
-                    Text(webClass.loginState == .signedIn ? "WebClassにログイン中" : "WebClass未ログイン")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                    HStack(spacing: 12) {
-                        ProfileStatus(symbol: "checkmark.shield.fill", title: "セッション", value: webClass.loginState == .signedIn ? "有効" : "未接続")
-                        ProfileStatus(symbol: "number", title: "バージョン", value: "4.5.2")
+                        .font(.system(size: 66)).foregroundStyle(.indigo)
+                        .symbolRenderingMode(.hierarchical)
+                    Text(webClass.userName.isEmpty ? "WebClass ユーザー" : webClass.userName).font(.title2.bold()).lineLimit(1)
+                    Label(webClass.loginState == .signedIn ? "ログイン中" : webClass.loginState == .checking ? "セッションを確認中" : "未ログイン", systemImage: webClass.loginState == .signedIn ? "checkmark.circle.fill" : "person.crop.circle.badge.exclamationmark")
+                        .font(.subheadline).foregroundStyle(webClass.loginState == .signedIn ? Color.green : Color.secondary)
+                    HStack(spacing: 18) {
+                        Label("v4.5.2", systemImage: "number")
+                        Label(webClass.loginState == .signedIn ? "セッション有効" : "未接続", systemImage: "checkmark.shield")
+                    }.font(.caption).foregroundStyle(.secondary)
+                }.padding(.vertical, 18).frame(maxWidth: .infinity)
+            }
+
+            Section("アカウント") {
+                NavigationLink { WebClassView(startURL: WebClassSession.messagesURL) } label: {
+                    IOSSettingsRow(symbol: "envelope.fill", color: .blue, title: "メッセージ", subtitle: "WebClassの受信トレイ")
+                }
+                Button { confirmingCacheClear = true } label: {
+                    IOSSettingsRow(symbol: "trash.fill", color: .teal, title: "キャッシュをクリア", subtitle: "ログイン状態は保持されます")
+                }.foregroundStyle(.primary)
+                if webClass.loginState == .signedIn {
+                    Button(role: .destructive) { confirmingLogout = true } label: {
+                        IOSSettingsRow(symbol: "rectangle.portrait.and.arrow.right", color: .red, title: "ログアウト", subtitle: "WebClassのセッションを終了")
                     }
                 }
-                .padding(.vertical, 20).frame(maxWidth: .infinity)
+            }
 
-                SettingsCard(title: "外観", symbol: "paintpalette.fill") {
-                    Menu {
-                        Button("システムに従う") { settings.appearance = "system" }
-                        Button("ライト") { settings.appearance = "light" }
-                        Button("ダーク") { settings.appearance = "dark" }
-                    } label: {
-                        SettingsLinkRow(symbol: "circle.lefthalf.filled", color: .indigo, title: "アプリのテーマ", subtitle: themeLabel, showsChevron: true)
-                    }.buttonStyle(.plain)
-                    SettingsDivider()
-                    SettingsToggleRow(symbol: "moon.stars.fill", color: .purple, title: "Webページもダークにする", subtitle: "WebClassなどの表示にも適用", isOn: $settings.webViewDarkMode)
+            Section("外観") {
+                Menu {
+                    Button("システムに従う") { settings.appearance = "system" }
+                    Button("ライト") { settings.appearance = "light" }
+                    Button("ダーク") { settings.appearance = "dark" }
+                } label: {
+                    IOSSettingsRow(symbol: "circle.lefthalf.filled", color: .indigo, title: "アプリのテーマ", subtitle: themeLabel, trailingValue: themeLabel)
+                }.foregroundStyle(.primary)
+                Toggle(isOn: $settings.webViewDarkMode) {
+                    IOSSettingsRow(symbol: "moon.stars.fill", color: .purple, title: "Webページもダークにする", subtitle: "Dark ReaderをWebViewへ適用")
                 }
+            }
 
-                SettingsCard(title: "WebClass", symbol: "graduationcap.fill") {
-                    NavigationLink { WebClassView(startURL: WebClassSession.messagesURL) } label: {
-                        SettingsLinkRow(symbol: "envelope.fill", color: .blue, title: "メッセージ", subtitle: "受信トレイを開く")
-                    }.buttonStyle(.plain)
-                    SettingsDivider()
-                    Button { confirmingCacheClear = true } label: {
-                        SettingsLinkRow(symbol: "trash.fill", color: .teal, title: "キャッシュをクリア", subtitle: "ログイン情報を残して一時データを削除", showsChevron: false)
-                    }.buttonStyle(.plain)
-                    SettingsDivider()
-                    if webClass.loginState == .signedIn {
-                        Button { confirmingLogout = true } label: {
-                            SettingsLinkRow(symbol: "rectangle.portrait.and.arrow.right", color: .red, title: "ログアウト", subtitle: webClass.userName.isEmpty ? "現在のセッションを終了" : webClass.userName, showsChevron: false)
-                        }.buttonStyle(.plain)
-                    } else {
-                        SettingsLinkRow(symbol: "person.crop.circle.badge.exclamationmark", color: .orange, title: "ログイン状態", subtitle: webClass.loginState == .checking ? "確認中" : "未ログイン", showsChevron: false)
-                    }
+            Section("一般") {
+                NavigationLink { AppInfoView() } label: {
+                    IOSSettingsRow(symbol: "info.circle.fill", color: .blue, title: "情報・ライセンス", subtitle: "取得元・バージョン・OSS")
                 }
-
-                SettingsCard(title: "アプリ情報", symbol: "info.circle.fill") {
-                    SettingsLinkRow(symbol: "number", color: .gray, title: "バージョン", subtitle: "4.5.2 (31)", showsChevron: false)
-                    SettingsDivider()
-                    NavigationLink { AppInfoView() } label: {
-                        SettingsLinkRow(symbol: "doc.text.magnifyingglass", color: .teal, title: "情報・ライセンス", subtitle: "取得元とOSSライセンス")
-                    }.buttonStyle(.plain)
-                    SettingsDivider()
-                    NavigationLink { DeveloperSettingsView() } label: {
-                        SettingsLinkRow(symbol: "hammer.fill", color: .orange, title: "開発者向け設定", subtitle: "試験的な機能")
-                    }.buttonStyle(.plain)
+                NavigationLink { DeveloperSettingsView() } label: {
+                    IOSSettingsRow(symbol: "hammer.fill", color: .orange, title: "開発者向け設定", subtitle: "試験的な機能と詳細設定")
                 }
-            }.padding(16)
+            }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
         .appScreenBackground()
         .navigationTitle("マイページ")
         .confirmationDialog("WebClassからログアウトしますか？", isPresented: $confirmingLogout, titleVisibility: .visible) {
@@ -95,6 +88,23 @@ struct SettingsView: View {
     private func clearWebCache() {
         let types: Set<String> = [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache, WKWebsiteDataTypeOfflineWebApplicationCache]
         WKWebsiteDataStore.default().removeData(ofTypes: types, modifiedSince: .distantPast) { Task { @MainActor in cacheCleared = true } }
+    }
+}
+
+private struct IOSSettingsRow: View {
+    let symbol: String
+    let color: Color
+    let title: String
+    let subtitle: String
+    var trailingValue: String? = nil
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                .frame(width: 32, height: 32).background(color.gradient, in: RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 2) { Text(title).font(.body); Text(subtitle).font(.caption).foregroundStyle(.secondary) }
+            Spacer()
+            if let trailingValue { Text(trailingValue).font(.subheadline).foregroundStyle(.secondary) }
+        }.padding(.vertical, 3).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
     }
 }
 

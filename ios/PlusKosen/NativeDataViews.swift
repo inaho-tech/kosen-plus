@@ -110,6 +110,8 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
 
     private let url: URL
     private let kind: Kind
+    private var authenticationStep = 0
+    private var authenticationAttempt = UUID()
     private lazy var webView: WKWebView = {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
@@ -129,6 +131,7 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
     func reload() {
         isLoading = true
         errorMessage = nil
+        authenticationStep = 0
         webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData))
     }
 
@@ -149,11 +152,11 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard let current = webView.url else { return }
-        if current.path.contains("login.php") || current.host?.contains("microsoftonline.com") == true {
-            isLoading = false
-            errorMessage = "WebClassへのログインが必要です。ホームからログインしてください。"
+        if handleAuthenticationRedirect(current, in: webView) {
             return
         }
+        authenticationAttempt = UUID()
+        authenticationStep = 0
         switch kind {
         case .course: extractCourse(from: webView)
         case .scores: extractScores(from: webView)
@@ -161,6 +164,35 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
         case .departments: extractDepartments(from: webView)
         case .subjects: extractSubjects(from: webView)
         case .syllabusDetail: extractSyllabusDetail(from: webView)
+        }
+    }
+
+    private func handleAuthenticationRedirect(_ current: URL, in webView: WKWebView) -> Bool {
+        if current.path.contains("logout.php") {
+            authenticationStep = max(authenticationStep, 1)
+            webView.load(URLRequest(url: WebClassSession.loginURL, cachePolicy: .reloadIgnoringLocalCacheData))
+            return true
+        }
+        guard current.path.contains("login.php") || current.host?.contains("microsoftonline.com") == true else { return false }
+        if authenticationStep == 0 {
+            authenticationStep = 1
+            beginAuthenticationTimeout()
+            webView.load(URLRequest(url: WebClassSession.logoutURL, cachePolicy: .reloadIgnoringLocalCacheData))
+        } else if current.path.contains("login.php"), authenticationStep == 1 {
+            authenticationStep = 2
+            webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData))
+        }
+        return true
+    }
+
+    private func beginAuthenticationTimeout() {
+        let attempt = UUID()
+        authenticationAttempt = attempt
+        Task {
+            try? await Task.sleep(for: .seconds(20))
+            guard authenticationAttempt == attempt, authenticationStep > 0 else { return }
+            isLoading = false
+            errorMessage = "WebClassへの再ログインが必要です。ホームのログイン画面を完了してから再読み込みしてください。"
         }
     }
 
@@ -810,13 +842,13 @@ struct SyllabusDetailView: View {
                                     } else {
                                         VStack(spacing: 0) {
                                             ForEach(Array(section.1.enumerated()), id: \.element.id) { index, row in
-                                                VStack(alignment: .leading, spacing: 6) {
-                                                    Text(row.label).font(.caption.weight(.semibold)).foregroundStyle(.indigo)
-                                                    Text(row.value).font(.body).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
-                                                }.padding(14)
+                                                SyllabusDetailInfoRow(section: section.0, row: row)
                                                 if index < section.1.count - 1 { Divider().padding(.leading, 14) }
                                             }
-                                        }.appCard(cornerRadius: 16)
+                                        }
+                                        .appCard(cornerRadius: 16)
+                                        .overlay(alignment: .leading) { Rectangle().fill(sectionColor(section.0)).frame(width: 4) }
+                                        .clipShape(RoundedRectangle(cornerRadius: 16))
                                     }
                                 }.id(section.0)
                             }
@@ -848,6 +880,35 @@ struct SyllabusDetailView: View {
 
     private func sectionSymbol(_ title: String) -> String {
         switch title { case "到達目標": "target"; case "ルーブリック": "checklist.checked"; case "教育方法等": "person.2.fill"; case "授業計画": "calendar"; case "評価割合": "chart.pie.fill"; case "科目基礎情報": "info.circle.fill"; default: "doc.text.fill" }
+    }
+
+    private func sectionColor(_ title: String) -> Color {
+        switch title { case "評価割合": .purple; case "ルーブリック": .teal; case "授業計画": .orange; case "到達目標": .green; default: .indigo }
+    }
+}
+
+private struct SyllabusDetailInfoRow: View {
+    let section: String
+    let row: SyllabusDetailRow
+    private var percentage: Double? {
+        guard section == "評価割合", let match = row.value.range(of: #"\d+(?:\.\d+)?"#, options: .regularExpression) else { return nil }
+        return Double(row.value[match]).map { min(max($0 / 100, 0), 1) }
+    }
+    private var rubricColor: Color {
+        if row.label.contains("理想") { return .green }
+        if row.label.contains("標準") { return .orange }
+        if row.label.contains("未到達") { return .red }
+        return .teal
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(row.label).font(.caption.weight(.semibold)).foregroundStyle(section == "ルーブリック" ? rubricColor : Color.indigo)
+            Text(row.value).font(.body).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+            if let percentage {
+                ProgressView(value: percentage).tint(.purple)
+                Text("\(Int(percentage * 100))% ").font(.caption2.bold()).foregroundStyle(.purple).frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }.padding(14)
     }
 }
 
