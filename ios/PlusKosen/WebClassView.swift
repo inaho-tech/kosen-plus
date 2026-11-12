@@ -12,6 +12,7 @@ struct WebClassView: View {
 
     var body: some View {
         WebContainer(url: startURL, darkMode: settings.webViewDarkMode, preferMobileCourseUI: customWebClassUI, progress: $progress, pageTitle: $title, onNavigation: onNavigation)
+            .id(settings.webViewDarkMode)
             .background(settings.webViewDarkMode ? Color.black : Color(.systemBackground))
             .navigationTitle(title.isEmpty ? "WebClass" : title)
             .navigationBarTitleDisplayMode(.inline)
@@ -33,8 +34,11 @@ struct WebContainer: UIViewRepresentable {
         config.websiteDataStore = .default()
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         if darkMode {
-            let source = "document.documentElement.style.background='#000';document.documentElement.style.colorScheme='dark';"
+            let source = "document.documentElement.style.cssText+=';background:#000!important;color-scheme:dark!important';"
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+            if let library = Self.darkReaderSource {
+                config.userContentController.addUserScript(WKUserScript(source: library + ";" + Self.darkReaderEnableScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false))
+            }
         }
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -47,12 +51,29 @@ struct WebContainer: UIViewRepresentable {
         return webView
     }
 
-    func updateUIView(_ webView: WKWebView, context: Context) {}
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        context.coordinator.parent = self
+        context.coordinator.applyDarkMode(to: webView)
+    }
+
+    private static let darkReaderSource: String? = {
+        guard let path = Bundle.main.path(forResource: "darkreader-4.9.134.min", ofType: "js") else { return nil }
+        return try? String(contentsOfFile: path, encoding: .utf8)
+    }()
+
+    private static let darkReaderEnableScript = #"""
+    (() => {
+      if (!window.DarkReader) return;
+      try { DarkReader.setFetchMethod(url => window.fetch(url)); } catch (_) {}
+      DarkReader.enable({brightness:100,contrast:90,sepia:0});
+    })(); void 0;
+    """#
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         var parent: WebContainer
         private var progressObservation: NSKeyValueObservation?
         private var titleObservation: NSKeyValueObservation?
+        private var appliedDarkMode: Bool?
         init(_ parent: WebContainer) { self.parent = parent }
 
         func observe(_ webView: WKWebView) {
@@ -100,14 +121,20 @@ struct WebContainer: UIViewRepresentable {
             webView.scrollView.setContentOffset(.zero, animated: false)
             if let url = webView.url { parent.onNavigation?(url) }
             if webView.url?.host == "webclass.kosen-k.go.jp" { Task { await WebClassCookieVault.save() } }
-            guard parent.darkMode else { return }
-            if let path = Bundle.main.path(forResource: "darkreader-4.9.134.min", ofType: "js"),
-               let script = try? String(contentsOfFile: path, encoding: .utf8) {
-                let config = "DarkReader.setFetchMethod(window.fetch);DarkReader.enable({brightness:100,contrast:90,sepia:0});void 0;"
-                webView.evaluateJavaScript(script + ";" + config, completionHandler: nil)
-            } else {
+            appliedDarkMode = nil
+            applyDarkMode(to: webView)
+        }
+
+        func applyDarkMode(to webView: WKWebView) {
+            guard appliedDarkMode != parent.darkMode else { return }
+            appliedDarkMode = parent.darkMode
+            if parent.darkMode, let script = WebContainer.darkReaderSource {
+                webView.evaluateJavaScript(script + ";" + WebContainer.darkReaderEnableScript, completionHandler: nil)
+            } else if parent.darkMode {
                 let css = "html{color-scheme:dark!important;background:#000!important}body{background:#000!important;color:#e8e8e8!important}"
                 webView.evaluateJavaScript("var s=document.createElement('style');s.textContent=\(String(reflecting: css));document.head.appendChild(s);void 0;", completionHandler: nil)
+            } else {
+                webView.evaluateJavaScript("if(window.DarkReader){DarkReader.disable();}document.documentElement.style.colorScheme='';void 0;", completionHandler: nil)
             }
         }
     }

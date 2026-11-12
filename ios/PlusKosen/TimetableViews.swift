@@ -129,6 +129,18 @@ struct TrainStationListView: View {
             else {
                 ScrollView {
                     LazyVStack(spacing: 14) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                            TextField("駅名・よみがなで検索", text: $query)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            if !query.isEmpty {
+                                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
+                                    .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 14).frame(height: 48).appCard(cornerRadius: 14)
+
                         if !favorites.isEmpty {
                             AppSectionHeader(title: "お気に入り", subtitle: "よく使う駅", symbol: "star.fill")
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 10)], spacing: 10) {
@@ -153,7 +165,6 @@ struct TrainStationListView: View {
                     }
                     .padding(16)
                 }
-                .searchable(text: $query, prompt: "駅名・よみがなで検索")
                 .appScreenBackground()
             }
         }

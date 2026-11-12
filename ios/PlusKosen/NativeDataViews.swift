@@ -35,7 +35,14 @@ struct CourseScoreGroup: Identifiable, Hashable {
     let id: String
     let name: String
     let items: [CourseScoreItem]
-    let total: Double?
+    let totalMy: Double?
+    let totalCourse: Double?
+}
+
+struct CourseScorePageMeta: Hashable {
+    let displayType: String
+    let startDate: String
+    let endDate: String
 }
 
 struct CourseReportItem: Identifiable, Hashable {
@@ -98,6 +105,7 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
     @Published var detailTitle = ""
     @Published var detailRows: [SyllabusDetailRow] = []
     @Published var scoreGroups: [CourseScoreGroup] = []
+    @Published var scoreMeta = CourseScorePageMeta(displayType: "", startDate: "", endDate: "")
     @Published var reports: [CourseReportItem] = []
 
     private let url: URL
@@ -122,6 +130,17 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
         isLoading = true
         errorMessage = nil
         webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData))
+    }
+
+    func selectScoreType(_ type: String) {
+        guard case .scores = kind, ["scoremax", "scoreave", "scoremin", "scoresum", "execnum", "time"].contains(type) else { return }
+        isLoading = true
+        let script = """
+        (() => { const form=document.getElementById('PersonalScoreSheetSearch'); const radio=form?.querySelector('input[name=\"showdata\"][value=\"\(type)\"]'); if(!form||!radio)return false; radio.checked=true; form.submit(); return true; })()
+        """
+        webView.evaluateJavaScript(script) { _, error in
+            if let error { Task { @MainActor in self.fail(error) } }
+        }
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { fail(error) }
@@ -205,26 +224,35 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
         let script = #"""
         (() => {
           const table = document.querySelector('table#PersonalScoreSheet') || [...document.querySelectorAll('table')].find(t => t.querySelector('th.contents-title, tr.unittitle'));
-          if (!table) return JSON.stringify([]);
+          if (!table) return JSON.stringify({page:{displayType:'',startDate:'',endDate:''},groups:[]});
+          const form=document.querySelector('form#PersonalScoreSheetSearch');
+          const page={
+            displayType: form?.querySelector('input[name="showdata"]:checked')?.value || '',
+            startDate: form?.querySelector('input[name="summaryOption[dateRangeStart]"]')?.value || '',
+            endDate: form?.querySelector('input[name="summaryOption[dateRangeEnd]"]')?.value || ''
+          };
           const groups = []; let current = () => groups[groups.length - 1];
           [...table.querySelectorAll('tr')].forEach((row, index) => {
-            if (row.classList.contains('unittitle')) { groups.push({ id: `g-${index}`, name: row.querySelector('th')?.textContent.trim() || '成績一覧', items: [], total: null }); return; }
-            if (row.classList.contains('foot')) { if (current()) current().total = parseFloat(row.querySelector('td')?.textContent) || null; return; }
+            if (row.classList.contains('unittitle')) { groups.push({ id: `g-${index}`, name: row.querySelector('th')?.textContent.trim() || '成績一覧', items: [], totalMy: null, totalCourse: null }); return; }
+            if (row.classList.contains('foot')) { const cells=row.querySelectorAll('td'); if (current()) { const my=parseFloat(cells[0]?.textContent); const course=parseFloat(cells[1]?.textContent); current().totalMy=Number.isNaN(my)?null:my; current().totalCourse=Number.isNaN(course)?null:course; } return; }
             const titleCell = row.querySelector('th.contents-title'); if (!titleCell) return;
-            if (!current()) groups.push({ id: 'scores', name: '成績一覧', items: [], total: null });
+            if (!current()) groups.push({ id: 'scores', name: '成績一覧', items: [], totalMy: null, totalCourse: null });
             const cells = row.querySelectorAll('td'); if (cells.length < 2) return;
             const scoreLink = cells[0].querySelector('a'); const raw = (scoreLink?.textContent || cells[0].textContent || '').trim();
             const scoreMatch = raw.match(/[0-9]+(?:\.[0-9]+)?/); const average = parseFloat(cells[1].textContent);
             current().items.push({ id: `s-${index}`, title: (titleCell.querySelector('a')?.textContent || titleCell.textContent).trim(), scoreText: raw, score: scoreMatch ? parseFloat(scoreMatch[0]) : null, average: Number.isNaN(average) ? null : average, url: scoreLink ? new URL(scoreLink.href, location.href).href : null });
           });
-          return JSON.stringify(groups);
+          return JSON.stringify({page,groups});
         })()
         """#
-        struct Payload: Decodable { let id: String; let name: String; let items: [Item]; let total: Double? }
+        struct Payload: Decodable { let page: Page; let groups: [Group] }
+        struct Page: Decodable { let displayType: String; let startDate: String; let endDate: String }
+        struct Group: Decodable { let id: String; let name: String; let items: [Item]; let totalMy: Double?; let totalCourse: Double? }
         struct Item: Decodable { let id: String; let title: String; let scoreText: String; let score: Double?; let average: Double?; let url: URL? }
         evaluate(script) { data in
-            guard let data, let values = try? JSONDecoder().decode([Payload].self, from: data) else { return }
-            self.scoreGroups = values.map { CourseScoreGroup(id: $0.id, name: $0.name, items: $0.items.map { CourseScoreItem(id: $0.id, title: $0.title, scoreText: $0.scoreText, score: $0.score, average: $0.average, url: $0.url) }, total: $0.total) }
+            guard let data, let value = try? JSONDecoder().decode(Payload.self, from: data) else { return }
+            self.scoreMeta = CourseScorePageMeta(displayType: value.page.displayType, startDate: value.page.startDate, endDate: value.page.endDate)
+            self.scoreGroups = value.groups.map { CourseScoreGroup(id: $0.id, name: $0.name, items: $0.items.map { CourseScoreItem(id: $0.id, title: $0.title, scoreText: $0.scoreText, score: $0.score, average: $0.average, url: $0.url) }, totalMy: $0.totalMy, totalCourse: $0.totalCourse) }
             self.isLoading = false
         }
     }
@@ -411,7 +439,7 @@ private struct CourseContentCardView: View {
                         ContentRow(item: item)
                         Spacer(minLength: 10)
                         Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
-                    }.padding(14)
+                    }.padding(14).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                 }.buttonStyle(.plain)
             } else { ContentRow(item: item).padding(14).opacity(0.55) }
             if item.usageCount != nil || item.availablePeriod != nil || item.detailURL != nil || item.historyURL != nil {
@@ -426,10 +454,14 @@ private struct CourseContentCardView: View {
                     }
                     Spacer()
                     if let detail = item.detailURL {
-                        NavigationLink { WebClassView(startURL: detail) } label: { Label("詳細", systemImage: "info.circle").font(.caption.weight(.semibold)) }
+                        NavigationLink { NativeContentDetailView(url: detail) } label: {
+                            Label("詳細", systemImage: "info.circle").font(.caption.weight(.semibold)).padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
                     }
                     if let history = item.historyURL {
-                        NavigationLink { WebClassView(startURL: history) } label: { Label("履歴", systemImage: "clock.arrow.circlepath").font(.caption.weight(.semibold)) }
+                        NavigationLink { NativeContentHistoryView(url: history) } label: {
+                            Label("履歴", systemImage: "clock.arrow.circlepath").font(.caption.weight(.semibold)).padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
                     }
                 }.padding(.horizontal, 14).padding(.vertical, 10)
             }
@@ -453,8 +485,22 @@ private struct CourseScoresView: View {
             else {
                 ScrollView {
                     LazyVStack(spacing: 11) {
+                        ScoreSummaryCard(groups: loader.scoreGroups, meta: loader.scoreMeta)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(scoreTypes, id: \.0) { entry in
+                                    Button { loader.selectScoreType(entry.0) } label: {
+                                        Text(entry.1).font(.caption.weight(.semibold)).foregroundStyle(loader.scoreMeta.displayType == entry.0 ? Color.white : Color.primary)
+                                            .padding(.horizontal, 12).frame(height: 34)
+                                            .background(loader.scoreMeta.displayType == entry.0 ? Color.indigo : Color.clear, in: Capsule())
+                                            .contentShape(Capsule())
+                                    }.buttonStyle(.plain).appCard(cornerRadius: 17)
+                                }
+                            }
+                        }
                         ForEach(loader.scoreGroups) { group in
-                            AppSectionHeader(title: group.name, subtitle: group.total.map { "合計 \(formatNumber($0))" })
+                            AppSectionHeader(title: group.name, subtitle: "\(group.items.count)件")
+                            if group.totalMy != nil || group.totalCourse != nil { ScoreTotalCard(my: group.totalMy, course: group.totalCourse) }
                             ForEach(group.items) { item in
                                 ScoreCard(item: item)
                             }
@@ -464,22 +510,71 @@ private struct CourseScoresView: View {
             }
         }
     }
-    private func formatNumber(_ value: Double) -> String { value.rounded() == value ? String(Int(value)) : String(format: "%.1f", value) }
+    private let scoreTypes = [("scoremax", "最大得点"), ("scoreave", "平均得点"), ("scoremin", "最少得点"), ("scoresum", "合計得点"), ("execnum", "実施回数"), ("time", "利用時間")]
+}
+
+private struct ScoreSummaryCard: View {
+    let groups: [CourseScoreGroup]
+    let meta: CourseScorePageMeta
+    private var items: [CourseScoreItem] { groups.flatMap(\.items) }
+    private var scores: [Double] { items.compactMap(\.score) }
+    private var courseAverages: [Double] { items.compactMap(\.average) }
+    private var average: Double? { scores.isEmpty ? nil : scores.reduce(0, +) / Double(scores.count) }
+    private var courseAverage: Double? { courseAverages.isEmpty ? nil : courseAverages.reduce(0, +) / Double(courseAverages.count) }
+    private var aboveAverage: Int { items.filter { item in guard let score = item.score, let average = item.average else { return false }; return score >= average }.count }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            HStack {
+                Label("成績統計", systemImage: "chart.bar.xaxis").font(.headline).foregroundStyle(.indigo)
+                Spacer()
+                if !meta.startDate.isEmpty || !meta.endDate.isEmpty { Text("\(meta.startDate) 〜 \(meta.endDate)").font(.caption2).foregroundStyle(.secondary) }
+            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 9) {
+                ScoreMetric(title: "実施済み", value: "\(scores.count)/\(items.count)", color: .indigo)
+                ScoreMetric(title: "自分の平均", value: value(average), color: .purple)
+                ScoreMetric(title: "コース平均", value: value(courseAverage), color: .teal)
+                ScoreMetric(title: "最高", value: value(scores.max()), color: .green)
+                ScoreMetric(title: "最低", value: value(scores.min()), color: .orange)
+                ScoreMetric(title: "平均以上", value: "\(aboveAverage)件", color: .blue)
+            }
+        }.padding(15).appCard(cornerRadius: 18)
+    }
+    private func value(_ number: Double?) -> String { guard let number else { return "—" }; return number.rounded() == number ? "\(Int(number))" : String(format: "%.1f", number) }
+}
+
+private struct ScoreMetric: View {
+    let title: String; let value: String; let color: Color
+    var body: some View { VStack(spacing: 4) { Text(title).font(.caption2).foregroundStyle(.secondary); Text(value).font(.headline.monospacedDigit()).foregroundStyle(color) }.padding(.vertical, 10).frame(maxWidth: .infinity).background(color.opacity(0.09), in: RoundedRectangle(cornerRadius: 11)) }
+}
+
+private struct ScoreTotalCard: View {
+    let my: Double?; let course: Double?
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) { Text("カテゴリ合計").font(.subheadline.bold()); if let my, let course { Text("平均差 \(difference(my - course))").font(.caption.bold()).foregroundStyle(my >= course ? Color.green : Color.red) } }
+            Spacer()
+            if let course { VStack(alignment: .trailing) { Text("コース平均").font(.caption2).foregroundStyle(.secondary); Text(format(course)).font(.headline.monospacedDigit()) } }
+            if let my { VStack(alignment: .trailing) { Text("自分").font(.caption2).foregroundStyle(.secondary); Text(format(my)).font(.title3.bold().monospacedDigit()).foregroundStyle(.indigo) } }
+        }.padding(14).background(.indigo.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+    }
+    private func format(_ value: Double) -> String { value.rounded() == value ? "\(Int(value))" : String(format: "%.1f", value) }
+    private func difference(_ value: Double) -> String { (value >= 0 ? "+" : "") + String(format: "%.1f", value) }
 }
 
 private struct ScoreCard: View {
     let item: CourseScoreItem
     var body: some View {
-        HStack(spacing: 13) {
-            AppIconTile(symbol: "chart.bar.fill", color: .purple)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(item.title).font(.headline).lineLimit(2)
-                if let average = item.average { Text("平均 \(String(format: "%.1f", average))").font(.caption).foregroundStyle(.secondary) }
-            }
-            Spacer()
-            Text(item.scoreText.isEmpty ? "—" : item.scoreText).font(.title3.bold()).foregroundStyle(item.score == nil ? Color.secondary : Color.purple)
-        }.padding(13).frame(minHeight: 78).appCard()
+        HStack(spacing: 0) {
+            Rectangle().fill(accent).frame(width: 4)
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(alignment: .top) { Text(item.title).font(.headline).lineLimit(2); Spacer(); Text(item.scoreText.isEmpty ? "—" : item.scoreText).font(.headline.bold()).foregroundStyle(accent).padding(.horizontal, 9).padding(.vertical, 4).background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 8)) }
+                if let average = item.average {
+                    HStack { if let score = item.score { Label(score >= average ? "平均以上" : "平均未満", systemImage: score >= average ? "arrow.up.right" : "arrow.down.right").foregroundStyle(score >= average ? Color.green : Color.red); Spacer(); Text("コース平均 \(String(format: "%.1f", average))") } else { Text("未受験・未提出"); Spacer(); Text("コース平均 \(String(format: "%.1f", average))") } }.font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                }
+            }.padding(14)
+        }.frame(minHeight: 86).appCard(cornerRadius: 16).clipShape(RoundedRectangle(cornerRadius: 16))
     }
+    private var accent: Color { guard let score = item.score else { return .gray }; guard let average = item.average else { return .purple }; return score >= average ? .green : .orange }
 }
 
 private struct CourseReportsView: View {
@@ -672,9 +767,11 @@ private struct FilterMenu: View {
             HStack(spacing: 5) {
                 if selected != nil { Image(systemName: "checkmark") }
                 Text(selected ?? title).lineLimit(1)
+                Spacer(minLength: 3)
                 Image(systemName: "chevron.down").font(.caption2)
-            }.font(.caption.weight(.semibold)).foregroundStyle(.primary).padding(.horizontal, 10).frame(height: 36).appCard(cornerRadius: 11)
+            }.font(.caption.weight(.semibold)).foregroundStyle(.primary).padding(.horizontal, 10).frame(maxWidth: .infinity).frame(height: 40).appCard(cornerRadius: 11).contentShape(Rectangle())
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -692,19 +789,96 @@ struct SyllabusDetailView: View {
             if loader.isLoading { PlaceholderList() }
             else if let error = loader.errorMessage { ContentUnavailableView("シラバスを取得できません", systemImage: "exclamationmark.triangle", description: Text(error)) }
             else {
-                List {
-                    ForEach(loader.detailRows) { row in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(row.label).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                            Text(row.value).textSelection(.enabled)
-                        }.padding(.vertical, 5)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 14) {
+                            SyllabusHeroCard(subject: subject, title: loader.detailTitle)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(sectionGroups, id: \.0) { section in
+                                        Button { withAnimation(.easeInOut) { proxy.scrollTo(section.0, anchor: .top) } } label: {
+                                            Text(section.0).font(.caption.weight(.semibold)).padding(.horizontal, 12).frame(height: 34).appCard(cornerRadius: 17).contentShape(Capsule())
+                                        }.buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                            ForEach(sectionGroups, id: \.0) { section in
+                                VStack(alignment: .leading, spacing: 11) {
+                                    AppSectionHeader(title: section.0, subtitle: "\(section.1.count)項目", symbol: sectionSymbol(section.0))
+                                    if section.0 == "授業計画" {
+                                        ForEach(Array(section.1.enumerated()), id: \.element.id) { index, row in SyllabusLessonRow(index: index + 1, row: row) }
+                                    } else {
+                                        VStack(spacing: 0) {
+                                            ForEach(Array(section.1.enumerated()), id: \.element.id) { index, row in
+                                                VStack(alignment: .leading, spacing: 6) {
+                                                    Text(row.label).font(.caption.weight(.semibold)).foregroundStyle(.indigo)
+                                                    Text(row.value).font(.body).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+                                                }.padding(14)
+                                                if index < section.1.count - 1 { Divider().padding(.leading, 14) }
+                                            }
+                                        }.appCard(cornerRadius: 16)
+                                    }
+                                }.id(section.0)
+                            }
+                        }.padding(16)
                     }
-                }.scrollContentBackground(.hidden)
+                    .appScreenBackground()
+                }
             }
         }
         .navigationTitle(loader.detailTitle.isEmpty ? subject.name : loader.detailTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .appScreenBackground()
+    }
+
+    private var sectionGroups: [(String, [SyllabusDetailRow])] {
+        let ordered = ["科目基礎情報", "到達目標", "ルーブリック", "教育方法等", "授業計画", "評価割合", "その他"]
+        let grouped = Dictionary(grouping: loader.detailRows, by: { section(for: $0.label) })
+        return ordered.compactMap { title in grouped[title].map { (title, $0) } }
+    }
+
+    private func section(for label: String) -> String {
+        if label.contains("到達目標") || label.contains("目標") { return "到達目標" }
+        if label.contains("ルーブリック") || label.contains("達成度") { return "ルーブリック" }
+        if label.contains("週") || label.contains("授業計画") { return "授業計画" }
+        if label.contains("評価") || label.contains("割合") { return "評価割合" }
+        if ["概要", "進め方", "方法", "注意点"].contains(where: label.contains) { return "教育方法等" }
+        if ["学校", "年度", "科目", "授業形態", "学科", "単位", "教員", "教科書", "対象学年", "開講"].contains(where: label.contains) { return "科目基礎情報" }
+        return "その他"
+    }
+
+    private func sectionSymbol(_ title: String) -> String {
+        switch title { case "到達目標": "target"; case "ルーブリック": "checklist.checked"; case "教育方法等": "person.2.fill"; case "授業計画": "calendar"; case "評価割合": "chart.pie.fill"; case "科目基礎情報": "info.circle.fill"; default: "doc.text.fill" }
+    }
+}
+
+private struct SyllabusHeroCard: View {
+    let subject: SyllabusSubject
+    let title: String
+    private var appearance: CourseAppearance { .course(subject.name) }
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            AppIconTile(symbol: appearance.symbol, color: appearance.color, size: 54)
+            VStack(alignment: .leading, spacing: 7) {
+                Text(title.isEmpty ? subject.name : title).font(.title3.bold()).lineLimit(3)
+                if !subject.teachers.isEmpty { Label(subject.teachers, systemImage: "person.fill").font(.caption).foregroundStyle(.secondary) }
+                HStack(spacing: 6) {
+                    if !subject.targetYear.isEmpty { Text(subject.targetYear) }
+                    if !subject.requirement.isEmpty { Text(subject.requirement) }
+                    if !subject.category.isEmpty { Text(subject.category) }
+                }.font(.caption2.weight(.semibold)).foregroundStyle(appearance.color)
+            }
+        }.padding(16).frame(maxWidth: .infinity, alignment: .leading).appCard(cornerRadius: 18)
+    }
+}
+
+private struct SyllabusLessonRow: View {
+    let index: Int
+    let row: SyllabusDetailRow
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("\(index)").font(.caption.bold()).foregroundStyle(.indigo).frame(width: 32, height: 32).background(.indigo.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 5) { Text(row.label).font(.subheadline.bold()); Text(row.value).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled) }
+        }.padding(13).frame(maxWidth: .infinity, alignment: .leading).appCard(cornerRadius: 14)
     }
 }
 

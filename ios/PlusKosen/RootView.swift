@@ -20,7 +20,7 @@ struct RootView: View {
             NavigationStack { ToolsView() }
                 .tabItem { Label("ツール", systemImage: "hammer.fill") }.tag(3)
             NavigationStack { SettingsView() }
-                .tabItem { Label("設定", systemImage: "person.crop.circle.fill") }.tag(4)
+                .tabItem { Label("マイページ", systemImage: "person.crop.circle.fill") }.tag(4)
         }
         .tint(.indigo)
     }
