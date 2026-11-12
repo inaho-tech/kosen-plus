@@ -48,6 +48,9 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
     @Published private(set) var currentSemester = ""
 
     private var requestedLogout = false
+    private var isStartingSession = false
+    private var attemptedSilentLogin = false
+    private var startupAttempt = UUID()
     private lazy var worker: WKWebView = {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
@@ -70,9 +73,25 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
             ]
         } else {
             Task {
-                await WebClassCookieVault.restore()
-                refresh()
+                let restoredCookies = await WebClassCookieVault.restore()
+                beginStartup(restoredCookies: restoredCookies)
             }
+        }
+    }
+
+    private func beginStartup(restoredCookies: Bool) {
+        isStartingSession = restoredCookies
+        attemptedSilentLogin = false
+        let attempt = UUID()
+        startupAttempt = attempt
+        refresh()
+        guard restoredCookies else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(12))
+            guard startupAttempt == attempt, loginState == .checking else { return }
+            isStartingSession = false
+            isLoading = false
+            loginState = .signedOut
         }
     }
 
@@ -95,6 +114,7 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
 
     func loginCompleted(at url: URL) {
         guard Self.isAuthenticatedHome(url) else { return }
+        isStartingSession = false
         refresh()
     }
 
@@ -122,7 +142,7 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard let url = webView.url else { return }
 
-        if requestedLogout || url.path.contains("login.php") || url.host?.contains("microsoftonline.com") == true {
+        if requestedLogout {
             let wasLogout = requestedLogout
             loginState = .signedOut
             courses = []
@@ -133,6 +153,24 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
             return
         }
 
+        if isStartingSession && url.path.contains("login.php") && !attemptedSilentLogin {
+            attemptedSilentLogin = true
+            worker.load(URLRequest(url: Self.loginURL, cachePolicy: .reloadIgnoringLocalCacheData))
+            return
+        }
+
+        if isStartingSession && url.host?.contains("microsoftonline.com") == true {
+            return
+        }
+
+        if url.path.contains("login.php") || url.host?.contains("microsoftonline.com") == true {
+            loginState = .signedOut
+            courses = []
+            userName = ""
+            isLoading = false
+            return
+        }
+
         guard Self.isAuthenticatedHome(url) else {
             if url.host == "webclass.kosen-k.go.jp" {
                 loginState = .signedOut
@@ -140,6 +178,9 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
             }
             return
         }
+
+        isStartingSession = false
+        startupAttempt = UUID()
 
         let script = #"""
         (() => {

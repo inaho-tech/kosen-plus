@@ -406,8 +406,14 @@ private struct CourseContentCardView: View {
     var body: some View {
         VStack(spacing: 0) {
             if let url = item.url, !item.isDisabled {
-                NavigationLink { WebClassView(startURL: url) } label: { ContentRow(item: item).padding(13) }.buttonStyle(.plain)
-            } else { ContentRow(item: item).padding(13).opacity(0.55) }
+                NavigationLink { WebClassView(startURL: url) } label: {
+                    HStack(spacing: 0) {
+                        ContentRow(item: item)
+                        Spacer(minLength: 10)
+                        Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                    }.padding(14)
+                }.buttonStyle(.plain)
+            } else { ContentRow(item: item).padding(14).opacity(0.55) }
             if item.usageCount != nil || item.availablePeriod != nil || item.detailURL != nil || item.historyURL != nil {
                 Divider().opacity(0.5)
                 HStack(spacing: 9) {
@@ -425,9 +431,9 @@ private struct CourseContentCardView: View {
                     if let history = item.historyURL {
                         NavigationLink { WebClassView(startURL: history) } label: { Label("履歴", systemImage: "clock.arrow.circlepath").font(.caption.weight(.semibold)) }
                     }
-                }.padding(.horizontal, 13).padding(.vertical, 9)
+                }.padding(.horizontal, 14).padding(.vertical, 10)
             }
-        }.appCard().opacity(item.isDisabled ? 0.62 : 1)
+        }.appCard(cornerRadius: 16).opacity(item.isDisabled ? 0.62 : 1)
     }
 }
 
@@ -524,8 +530,12 @@ private struct ContentRow: View {
                 .frame(width: 38, height: 38)
                 .background(appearance.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
             VStack(alignment: .leading, spacing: 3) {
-                HStack { Text(item.title); if item.isNew { Text("NEW").font(.caption2.bold()).foregroundStyle(.red) }; if item.isUnread { Text("未実施").font(.caption2.bold()).foregroundStyle(.orange) } }
-                if !item.category.isEmpty { Text(item.category).font(.caption).foregroundStyle(.secondary) }
+                Text(item.title).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
+                HStack(spacing: 6) {
+                    if !item.category.isEmpty { Text(item.category).foregroundStyle(.secondary) }
+                    if item.isNew { Text("NEW").foregroundStyle(.red) }
+                    if item.isUnread { Text("未実施").foregroundStyle(.orange) }
+                }.font(.caption.weight(.semibold))
             }
         }.padding(.vertical, 3)
     }
@@ -541,15 +551,10 @@ private struct PlaceholderList: View {
 struct SyllabusView: View {
     private static let rootURL = URL(string: "https://syllabus.kosen-k.go.jp/Pages/PublicDepartments?school_id=14")!
     @StateObject private var loader = DOMPageLoader(url: rootURL, kind: .departments)
-    @State private var query = ""
-
-    private var filtered: [SyllabusDepartment] {
-        query.isEmpty ? loader.departments : loader.departments.filter { $0.name.localizedCaseInsensitiveContains(query) }
-    }
     private var groups: [DepartmentGroup] {
-        let general = filtered.filter { $0.name.contains("一般") || $0.name.contains("総合") }
-        let advanced = filtered.filter { $0.name.contains("専攻") }
-        let regular = filtered.filter { !general.contains($0) && !advanced.contains($0) }
+        let general = loader.departments.filter { $0.name.contains("一般") || $0.name.contains("総合") }
+        let advanced = loader.departments.filter { $0.name.contains("専攻") }
+        let regular = loader.departments.filter { !general.contains($0) && !advanced.contains($0) }
         return [DepartmentGroup(title: "本科", departments: regular), DepartmentGroup(title: "一般科目", departments: general), DepartmentGroup(title: "専攻科", departments: advanced)].filter { !$0.departments.isEmpty }
     }
 
@@ -564,8 +569,9 @@ struct SyllabusView: View {
                             AppSectionHeader(title: group.title, subtitle: "\(group.departments.count)件")
                             ForEach(group.departments) { department in
                                 NavigationLink { SyllabusSubjectsView(department: department) } label: {
+                                    let appearance = CourseAppearance.department(department.name)
                                     HStack(spacing: 13) {
-                                        AppIconTile(symbol: "building.columns.fill", color: .orange)
+                                        AppIconTile(symbol: appearance.symbol, color: appearance.color)
                                         Text(department.name).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
                                         Spacer()
                                         Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
@@ -575,7 +581,7 @@ struct SyllabusView: View {
                         }
                     }
                     .padding(16)
-                }.searchable(text: $query, prompt: "学科を検索").refreshable { loader.reload() }.appScreenBackground()
+                }.refreshable { loader.reload() }.appScreenBackground()
             }
         }.navigationTitle("シラバス")
     }
@@ -619,6 +625,21 @@ struct SyllabusSubjectsView: View {
             else {
                 ScrollView {
                     LazyVStack(spacing: 11) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                            TextField("科目名・コード・教員名で検索", text: $query)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            if !query.isEmpty {
+                                Button { query = "" } label: {
+                                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .frame(height: 48)
+                        .appCard(cornerRadius: 14)
                         HStack(spacing: 8) {
                             FilterMenu(title: "科目区分", selected: $selectedCategory, options: categories)
                             if !requirements.isEmpty { FilterMenu(title: "必修区分", selected: $selectedRequirement, options: requirements) }
@@ -628,12 +649,12 @@ struct SyllabusSubjectsView: View {
                             AppSectionHeader(title: group.category, subtitle: "\(group.subjects.count)件")
                             ForEach(group.subjects) { subject in
                                 if let url = subject.url {
-                                    NavigationLink { SyllabusDetailView(subject: subject, url: url) } label: { SubjectRow(subject: subject).padding(13).frame(height: 92).appCard() }.buttonStyle(.plain)
-                                } else { SubjectRow(subject: subject).padding(13).frame(height: 92).appCard() }
+                                    NavigationLink { SyllabusDetailView(subject: subject, url: url) } label: { SubjectRow(subject: subject).padding(14).frame(minHeight: 98).appCard(cornerRadius: 16) }.buttonStyle(.plain)
+                                } else { SubjectRow(subject: subject).padding(14).frame(minHeight: 98).appCard(cornerRadius: 16) }
                             }
                         }
                     }.padding(16)
-                }.searchable(text: $query, prompt: "科目名・コード・教員名で検索").appScreenBackground()
+                }.appScreenBackground()
             }
         }.navigationTitle(department.name).navigationBarTitleDisplayMode(.inline)
     }
@@ -695,9 +716,15 @@ private struct SubjectRow: View {
             Image(systemName: appearance.symbol).foregroundStyle(appearance.color)
                 .frame(width: 42, height: 42).background(appearance.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
             VStack(alignment: .leading, spacing: 5) {
-            Text(subject.name).font(.headline).lineLimit(2)
-            if !subject.detail.isEmpty { Text(subject.detail).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                Text(subject.name).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
+                if !subject.detail.isEmpty { Text(subject.detail).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                HStack(spacing: 6) {
+                    if !subject.requirement.isEmpty { Text(subject.requirement) }
+                    if !subject.targetYear.isEmpty { Text(subject.targetYear) }
+                }.font(.caption2.weight(.semibold)).foregroundStyle(.indigo)
             }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
         }.padding(.vertical, 4)
     }
 }

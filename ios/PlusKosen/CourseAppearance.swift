@@ -73,3 +73,28 @@ struct CourseAppearance {
         needles.contains(where: value.contains)
     }
 }
+
+extension CourseAppearance {
+    static func department(_ name: String) -> CourseAppearance {
+        switch true {
+        case contains(name, ["機械", "ロボット"]):
+            return .init(symbol: "gearshape.2.fill", color: .red)
+        case contains(name, ["電気", "電子"]):
+            return .init(symbol: "bolt.fill", color: .orange)
+        case contains(name, ["情報", "知能"]):
+            return .init(symbol: "laptopcomputer", color: .indigo)
+        case contains(name, ["化学", "物質"]):
+            return .init(symbol: "atom", color: .green)
+        case contains(name, ["建築", "環境", "都市"]):
+            return .init(symbol: "building.2.fill", color: .gray)
+        case name.contains("商船"):
+            return .init(symbol: "ferry.fill", color: .blue)
+        case contains(name, ["一般", "総合"]):
+            return .init(symbol: "books.vertical.fill", color: .brown)
+        case name.contains("専攻"):
+            return .init(symbol: "graduationcap.fill", color: .indigo)
+        default:
+            return .init(symbol: "graduationcap.fill", color: .indigo)
+        }
+    }
+}

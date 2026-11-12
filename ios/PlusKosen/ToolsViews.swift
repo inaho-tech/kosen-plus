@@ -1,52 +1,47 @@
 import SwiftUI
 
 struct ToolsView: View {
-    private let tools = [
+    private let schoolTools = [
         ToolDestination(id: "camera", title: "無音カメラ", subtitle: "撮影とアプリ内ギャラリー", symbol: "camera.fill"),
         ToolDestination(id: "attendance", title: "電子出席簿", subtitle: "出席登録ページを開く", symbol: "person.badge.clock.fill"),
-        ToolDestination(id: "library", title: "図書館蔵書検索", subtitle: "蔵書を検索", symbol: "books.vertical.fill"),
+        ToolDestination(id: "library", title: "図書館蔵書検索", subtitle: "蔵書を検索", symbol: "books.vertical.fill")
+    ]
+    private let studyTools = [
         ToolDestination(id: "reaction", title: "反射神経テスト", subtitle: "反応時間を測定して記録", symbol: "bolt.fill"),
         ToolDestination(id: "pomodoro", title: "ポモドーロタイマー", subtitle: "集中と休憩を管理", symbol: "timer"),
         ToolDestination(id: "stopwatch", title: "ストップウォッチ", subtitle: "ラップ対応", symbol: "stopwatch.fill"),
         ToolDestination(id: "todo", title: "ToDoリスト", subtitle: "タスクを端末に保存", symbol: "checklist"),
         ToolDestination(id: "unit", title: "単位変換", subtitle: "長さ・質量などを換算", symbol: "arrow.left.arrow.right"),
-        ToolDestination(id: "kmap", title: "カルノー図", subtitle: "4変数までの論理式を整理", symbol: "square.grid.3x3.fill"),
-        ToolDestination(id: "othello", title: "オセロ", subtitle: "ボードゲーム", symbol: "circle.lefthalf.filled"),
-        ToolDestination(id: "gomoku", title: "五目並べ", subtitle: "ボードゲーム", symbol: "circle.grid.cross.fill"),
-        ToolDestination(id: "merge", title: "Number Merge", subtitle: "数字パズル", symbol: "square.grid.2x2.fill"),
-        ToolDestination(id: "hockey", title: "エアホッケー", subtitle: "対戦ゲーム", symbol: "circle.circle.fill"),
-        ToolDestination(id: "mine", title: "マインスイーパー", subtitle: "地雷を避けるパズル", symbol: "burst.fill"),
-        ToolDestination(id: "flappy", title: "Flappy Sky", subtitle: "アクションゲーム", symbol: "bird.fill")
+        ToolDestination(id: "kmap", title: "カルノー図", subtitle: "4変数までの論理式を整理", symbol: "square.grid.3x3.fill")
     ]
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 14) {
-                    AppIconTile(symbol: "hammer.fill", color: .indigo, size: 54)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("ツール").font(.title2.bold())
-                        Text("学習・撮影・計算・ゲーム").font(.subheadline).foregroundStyle(.secondary)
-                    }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(15).appCard()
-
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 12)], spacing: 12) {
-                ForEach(tools) { tool in
-                    NavigationLink(value: tool) {
-                        VStack(alignment: .leading, spacing: 10) {
-                            AppIconTile(symbol: tool.symbol, color: toolColor(tool.id), size: 44)
-                            Text(tool.title).font(.headline).foregroundStyle(.primary)
-                            Text(tool.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                        }.frame(maxWidth: .infinity, minHeight: 122, alignment: .topLeading)
-                            .padding(14).appCard()
-                    }
-                }
-                }
+            LazyVStack(alignment: .leading, spacing: 14) {
+                AppSectionHeader(title: "学校サービス", subtitle: "撮影・出席・図書館", symbol: "building.columns.fill")
+                toolGrid(schoolTools)
+                AppSectionHeader(title: "学習ツール", subtitle: "集中・記録・計算", symbol: "hammer.fill").padding(.top, 6)
+                toolGrid(studyTools)
             }.padding()
         }
         .appScreenBackground()
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("ツール")
         .navigationDestination(for: ToolDestination.self) { ToolRouter(id: $0.id, title: $0.title) }
+    }
+
+    private func toolGrid(_ values: [ToolDestination]) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 12)], spacing: 12) {
+            ForEach(values) { tool in
+                NavigationLink(value: tool) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        AppIconTile(symbol: tool.symbol, color: toolColor(tool.id), size: 44)
+                        Text(tool.title).font(.headline).foregroundStyle(.primary).lineLimit(1)
+                        Text(tool.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    }.frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+                        .padding(14).appCard(cornerRadius: 16)
+                }.buttonStyle(.plain)
+            }
+        }
     }
 
     private func toolColor(_ id: String) -> Color {
@@ -78,7 +73,7 @@ struct ToolRouter: View {
             case "todo": TodoView()
             case "unit": UnitConverterView()
             case "kmap": KarnaughView()
-            default: GamePlaceholderView(title: title)
+            default: ContentUnavailableView("利用できないツールです", systemImage: "exclamationmark.triangle")
             }
         }.navigationTitle(title).navigationBarTitleDisplayMode(.inline)
     }

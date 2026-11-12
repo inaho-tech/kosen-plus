@@ -33,12 +33,14 @@ enum WebClassCookieVault {
     private static let service = "com.webclass.plus.ios.webclass-session"
     private static let account = "cookies"
 
-    static func restore() async {
-        guard let data = loadData(), let records = try? JSONDecoder().decode([StoredCookie].self, from: data) else { return }
+    @discardableResult
+    static func restore() async -> Bool {
+        guard let data = loadData(), let records = try? JSONDecoder().decode([StoredCookie].self, from: data), !records.isEmpty else { return false }
         let store = WKWebsiteDataStore.default().httpCookieStore
         for record in records {
             if let cookie = record.cookie { await set(cookie, in: store) }
         }
+        return true
     }
 
     static func save() async {

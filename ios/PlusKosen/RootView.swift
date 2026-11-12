@@ -23,10 +23,6 @@ struct RootView: View {
                 .tabItem { Label("設定", systemImage: "person.crop.circle.fill") }.tag(4)
         }
         .tint(.indigo)
-        .toolbar(.hidden, for: .tabBar)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            LiquidPillNavigation(selection: $selection)
-        }
     }
 }
 

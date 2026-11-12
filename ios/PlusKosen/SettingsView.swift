@@ -5,32 +5,47 @@ struct SettingsView: View {
     @EnvironmentObject private var webClass: WebClassSession
     @State private var confirmingLogout = false
     var body: some View {
-        Form {
-            Section("表示") {
-                Picker("アプリのテーマ", selection: $settings.appearance) {
-                    Text("システムに従う").tag("system")
-                    Text("ライト").tag("light")
-                    Text("ダーク").tag("dark")
+        ScrollView {
+            LazyVStack(spacing: 18) {
+                SettingsCard(title: "外観", symbol: "paintpalette.fill") {
+                    SettingsPickerRow(symbol: "circle.lefthalf.filled", color: .indigo, title: "アプリのテーマ") {
+                        Picker("アプリのテーマ", selection: $settings.appearance) {
+                            Text("システム").tag("system")
+                            Text("ライト").tag("light")
+                            Text("ダーク").tag("dark")
+                        }.labelsHidden()
+                    }
+                    SettingsDivider()
+                    SettingsToggleRow(symbol: "moon.stars.fill", color: .purple, title: "Webページもダークにする", subtitle: "WebClassなどの表示にも適用", isOn: $settings.webViewDarkMode)
                 }
-                Toggle("ウェブビューもダークモードにする", isOn: $settings.webViewDarkMode)
-            }
-            Section("WebClass") {
-                NavigationLink("メッセージ") { WebClassView(startURL: URL(string: "https://webclass.kosen-k.go.jp/webclass/messages.php/inbox")!) }
-                if webClass.loginState == .signedIn {
-                    Button("ログアウト", role: .destructive) { confirmingLogout = true }
-                } else {
-                    LabeledContent("ログイン状態", value: "未ログイン")
+
+                SettingsCard(title: "WebClass", symbol: "graduationcap.fill") {
+                    NavigationLink { WebClassView(startURL: WebClassSession.messagesURL) } label: {
+                        SettingsLinkRow(symbol: "envelope.fill", color: .blue, title: "メッセージ", subtitle: "受信トレイを開く")
+                    }.buttonStyle(.plain)
+                    SettingsDivider()
+                    if webClass.loginState == .signedIn {
+                        Button { confirmingLogout = true } label: {
+                            SettingsLinkRow(symbol: "rectangle.portrait.and.arrow.right", color: .red, title: "ログアウト", subtitle: webClass.userName.isEmpty ? "現在のセッションを終了" : webClass.userName, showsChevron: false)
+                        }.buttonStyle(.plain)
+                    } else {
+                        SettingsLinkRow(symbol: "person.crop.circle.badge.exclamationmark", color: .orange, title: "ログイン状態", subtitle: webClass.loginState == .checking ? "確認中" : "未ログイン", showsChevron: false)
+                    }
                 }
-            }
-            Section("情報") {
-                LabeledContent("バージョン", value: "4.5.2 (31)")
-                NavigationLink("情報・ライセンス") { AppInfoView() }
-            }
-            Section("開発者設定") {
-                NavigationLink("開発者向け設定") { DeveloperSettingsView() }
-            }
+
+                SettingsCard(title: "アプリ情報", symbol: "info.circle.fill") {
+                    SettingsLinkRow(symbol: "number", color: .gray, title: "バージョン", subtitle: "4.5.2 (31)", showsChevron: false)
+                    SettingsDivider()
+                    NavigationLink { AppInfoView() } label: {
+                        SettingsLinkRow(symbol: "doc.text.magnifyingglass", color: .teal, title: "情報・ライセンス", subtitle: "取得元とOSSライセンス")
+                    }.buttonStyle(.plain)
+                    SettingsDivider()
+                    NavigationLink { DeveloperSettingsView() } label: {
+                        SettingsLinkRow(symbol: "hammer.fill", color: .orange, title: "開発者向け設定", subtitle: "試験的な機能")
+                    }.buttonStyle(.plain)
+                }
+            }.padding(16)
         }
-        .scrollContentBackground(.hidden)
         .appScreenBackground()
         .navigationTitle("設定")
         .confirmationDialog("WebClassからログアウトしますか？", isPresented: $confirmingLogout, titleVisibility: .visible) {
@@ -40,6 +55,88 @@ struct SettingsView: View {
             Text("WebClassのセッションを終了します。Microsoftアカウントのパスワードはアプリに保存されていません。")
         }
     }
+}
+
+private struct SettingsCard<Content: View>: View {
+    let title: String
+    let symbol: String
+    let content: Content
+    init(title: String, symbol: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.symbol = symbol
+        self.content = content()
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Label(title, systemImage: symbol)
+                .font(.headline).foregroundStyle(.indigo)
+                .padding(.horizontal, 15).padding(.top, 14).padding(.bottom, 7)
+            content
+        }.appCard(cornerRadius: 18)
+    }
+}
+
+private struct SettingsLinkRow: View {
+    let symbol: String
+    let color: Color
+    let title: String
+    let subtitle: String
+    var showsChevron = true
+    var body: some View {
+        HStack(spacing: 13) {
+            AppIconTile(symbol: symbol, color: color, size: 40)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.body.weight(.semibold)).foregroundStyle(.primary)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if showsChevron { Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary) }
+        }.padding(.horizontal, 14).frame(minHeight: 66)
+    }
+}
+
+private struct SettingsToggleRow: View {
+    let symbol: String
+    let color: Color
+    let title: String
+    let subtitle: String
+    @Binding var isOn: Bool
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            HStack(spacing: 13) {
+                AppIconTile(symbol: symbol, color: color, size: 40)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.body.weight(.semibold))
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }.padding(.horizontal, 14).frame(minHeight: 66)
+    }
+}
+
+private struct SettingsPickerRow<PickerContent: View>: View {
+    let symbol: String
+    let color: Color
+    let title: String
+    let picker: PickerContent
+    init(symbol: String, color: Color, title: String, @ViewBuilder picker: () -> PickerContent) {
+        self.symbol = symbol
+        self.color = color
+        self.title = title
+        self.picker = picker()
+    }
+    var body: some View {
+        HStack(spacing: 13) {
+            AppIconTile(symbol: symbol, color: color, size: 40)
+            Text(title).font(.body.weight(.semibold))
+            Spacer()
+            picker
+        }.padding(.horizontal, 14).frame(minHeight: 66)
+    }
+}
+
+private struct SettingsDivider: View {
+    var body: some View { Divider().padding(.leading, 67) }
 }
 
 struct AppInfoView: View {

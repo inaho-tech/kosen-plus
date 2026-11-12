@@ -5,7 +5,6 @@ enum AppPalette {
     static let background = Color(.systemGroupedBackground)
     static let card = Color(.secondarySystemGroupedBackground)
 }
-
 struct AppSectionHeader: View {
     let title: String
     var subtitle: String? = nil
@@ -23,7 +22,6 @@ struct AppSectionHeader: View {
         .accessibilityAddTraits(.isHeader)
     }
 }
-
 struct AppIconTile: View {
     let symbol: String
     let color: Color
@@ -75,41 +73,3 @@ private struct LiquidGlassCardModifier: ViewModifier {
     }
 }
 
-struct LiquidPillNavigation: View {
-    @Binding var selection: Int
-    private let items = [
-        ("ホーム", "graduationcap.fill"),
-        ("シラバス", "doc.text.fill"),
-        ("時刻表", "clock.fill"),
-        ("ツール", "hammer.fill"),
-        ("設定", "person.crop.circle.fill")
-    ]
-
-    var body: some View {
-        HStack(spacing: 3) {
-            ForEach(items.indices, id: \.self) { index in
-                Button { withAnimation(.snappy(duration: 0.28)) { selection = index } } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: items[index].1).font(.system(size: 17, weight: .semibold))
-                        Text(items[index].0).font(.system(size: 9.5, weight: .semibold)).lineLimit(1)
-                    }
-                    .foregroundStyle(selection == index ? Color.white : Color.primary.opacity(0.7))
-                    .frame(maxWidth: .infinity).frame(height: 49)
-                    .background {
-                        if selection == index { Capsule().fill(AppPalette.accent.gradient).shadow(color: AppPalette.accent.opacity(0.28), radius: 8, y: 3).matchedGeometryEffectSafe(id: "pill-selection") }
-                    }
-                }.buttonStyle(.plain).accessibilityLabel(items[index].0)
-            }
-        }
-        .padding(5)
-        .frame(maxWidth: 430)
-        .appCard(cornerRadius: 28)
-        .padding(.horizontal, 12)
-        .padding(.top, 5)
-        .padding(.bottom, 4)
-    }
-}
-
-private extension View {
-    func matchedGeometryEffectSafe(id: String) -> some View { self }
-}
