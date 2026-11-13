@@ -7,42 +7,28 @@ private struct CourseDayGroup: Identifiable {
 }
 
 struct RootView: View {
-    private enum AppTab: Int, CaseIterable, Identifiable {
+    fileprivate enum AppTab: Int, CaseIterable, Identifiable {
         case home, syllabus, timetable, tools, profile
         var id: Self { self }
         var title: String { switch self { case .home: "ホーム"; case .syllabus: "シラバス"; case .timetable: "時刻表"; case .tools: "ツール"; case .profile: "マイページ" } }
         var symbol: String { switch self { case .home: "graduationcap.fill"; case .syllabus: "doc.text.fill"; case .timetable: "clock.fill"; case .tools: "hammer.fill"; case .profile: "person.crop.circle.fill" } }
     }
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selection = AppTab.home
 
     var body: some View {
-        Group {
-            if horizontalSizeClass == .regular {
-                NavigationSplitView {
-                    List(AppTab.allCases) { tab in
-                        Button { selection = tab } label: {
-                            Label(tab.title, systemImage: tab.symbol).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .listRowBackground(selection == tab ? Color.indigo.opacity(0.13) : Color.clear)
-                    }
-                    .navigationTitle("高専プラス")
-                    .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
-                } detail: {
-                    NavigationStack { tabContent(selection) }
-                }
-                .navigationSplitViewStyle(.balanced)
-            } else {
-                TabView(selection: $selection) {
-                    ForEach(AppTab.allCases) { tab in
-                        NavigationStack { tabContent(tab) }
-                            .tabItem { Label(tab.title, systemImage: tab.symbol) }
-                            .tag(tab)
-                    }
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selection) {
+                ForEach(AppTab.allCases) { tab in
+                    NavigationStack { tabContent(tab) }
+                        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 72) }
+                        .toolbar(.hidden, for: .tabBar)
+                        .tag(tab)
                 }
             }
+            PillNavigation(selection: $selection)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 7)
         }
         .tint(.indigo)
     }
@@ -55,6 +41,38 @@ struct RootView: View {
         case .tools: ToolsView()
         case .profile: SettingsView()
         }
+    }
+}
+
+private struct PillNavigation: View {
+    @Binding var selection: RootView.AppTab
+    @Namespace private var selectionAnimation
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(RootView.AppTab.allCases) { tab in
+                Button {
+                    withAnimation(.snappy(duration: 0.32)) { selection = tab }
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: tab.symbol).font(.system(size: 18, weight: .semibold))
+                        Text(tab.title).font(.system(size: 10, weight: .semibold)).lineLimit(1)
+                    }
+                    .foregroundStyle(selection == tab ? Color.indigo : Color.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .background {
+                        if selection == tab {
+                            Capsule().fill(.indigo.opacity(0.14)).matchedGeometryEffect(id: "selection", in: selectionAnimation)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }.buttonStyle(.plain)
+            }
+        }
+        .padding(6)
+        .frame(maxWidth: 620)
+        .liquidGlassPill()
+        .shadow(color: .black.opacity(0.13), radius: 18, y: 8)
     }
 }
 

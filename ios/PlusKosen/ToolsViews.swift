@@ -7,12 +7,20 @@ struct ToolsView: View {
         ToolDestination(id: "library", title: "図書館蔵書検索", subtitle: "蔵書を検索", symbol: "books.vertical.fill")
     ]
     private let studyTools = [
-        ToolDestination(id: "reaction", title: "反射神経テスト", subtitle: "反応時間を測定して記録", symbol: "bolt.fill"),
         ToolDestination(id: "pomodoro", title: "ポモドーロタイマー", subtitle: "集中と休憩を管理", symbol: "timer"),
         ToolDestination(id: "stopwatch", title: "ストップウォッチ", subtitle: "ラップ対応", symbol: "stopwatch.fill"),
         ToolDestination(id: "todo", title: "ToDoリスト", subtitle: "タスクを端末に保存", symbol: "checklist"),
         ToolDestination(id: "unit", title: "単位変換", subtitle: "長さ・質量などを換算", symbol: "arrow.left.arrow.right"),
         ToolDestination(id: "kmap", title: "カルノー図", subtitle: "4変数までの論理式を整理", symbol: "square.grid.3x3.fill")
+    ]
+    private let gameTools = [
+        ToolDestination(id: "airhockey", title: "エアホッケー", subtitle: "CPUと対戦するアクションゲーム", symbol: "circle.circle.fill"),
+        ToolDestination(id: "othello", title: "オセロ", subtitle: "CPU対戦対応の定番ボードゲーム", symbol: "circle.grid.3x3.fill"),
+        ToolDestination(id: "gomoku", title: "五目並べ", subtitle: "11×11盤でCPUと対戦", symbol: "grid"),
+        ToolDestination(id: "reaction", title: "反射神経テスト", subtitle: "反応時間を測定して記録", symbol: "bolt.fill"),
+        ToolDestination(id: "merge", title: "Number Merge", subtitle: "数字を合体させるスライドパズル", symbol: "square.grid.2x2.fill"),
+        ToolDestination(id: "mines", title: "マインスイーパ", subtitle: "地雷を避けて安全なマスを開く", symbol: "burst.fill"),
+        ToolDestination(id: "flappy", title: "Flappy Sky", subtitle: "障害物を避けて飛び続ける", symbol: "cloud.fill")
     ]
 
     var body: some View {
@@ -22,6 +30,8 @@ struct ToolsView: View {
                 toolGrid(schoolTools)
                 AppSectionHeader(title: "学習ツール", subtitle: "集中・記録・計算", symbol: "hammer.fill").padding(.top, 6)
                 toolGrid(studyTools)
+                AppSectionHeader(title: "ゲーム", subtitle: "休憩・気分転換", symbol: "gamecontroller.fill").padding(.top, 6)
+                toolGrid(gameTools)
             }.padding().appReadableContentWidth()
         }
         .appScreenBackground()
@@ -49,7 +59,8 @@ struct ToolsView: View {
         case "camera": .blue
         case "attendance": .green
         case "library": .brown
-        case "reaction": .orange
+        case "reaction", "flappy": .orange
+        case "othello", "gomoku", "merge", "mines", "airhockey": .pink
         case "kmap", "unit": .purple
         case "pomodoro", "stopwatch": .red
         case "todo": .teal
@@ -68,6 +79,12 @@ struct ToolRouter: View {
             case "attendance": WebClassView(startURL: URL(string: "https://std.kisarazu.ac.jp/")!)
             case "library": WebClassView(startURL: URL(string: "https://libopac-c.kosen-k.go.jp/webopac15/cattab.do")!)
             case "reaction": ReactionView()
+            case "othello": OthelloGameView()
+            case "gomoku": GomokuGameView()
+            case "merge": NumberMergeGameView()
+            case "mines": MinesweeperGameView()
+            case "airhockey": AirHockeyGameView()
+            case "flappy": FlappySkyGameView()
             case "pomodoro": TimerToolView(minutes: 25, title: "ポモドーロ")
             case "stopwatch": StopwatchView()
             case "todo": TodoView()
@@ -158,17 +175,33 @@ struct ReactionView: View {
 }
 
 struct UnitConverterView: View {
+    private struct UnitOption: Identifiable { let id: String; let name: String; let toBase: (Double) -> Double; let fromBase: (Double) -> Double }
+    private struct Category: Identifiable { let id: String; let name: String; let units: [UnitOption] }
+    private let categories: [Category] = [
+        .init(id: "length", name: "長さ", units: [
+            .init(id:"mm",name:"ミリメートル",toBase:{$0/1000},fromBase:{$0*1000}), .init(id:"cm",name:"センチメートル",toBase:{$0/100},fromBase:{$0*100}), .init(id:"m",name:"メートル",toBase:{$0},fromBase:{$0}), .init(id:"km",name:"キロメートル",toBase:{$0*1000},fromBase:{$0/1000})]),
+        .init(id: "mass", name: "質量", units: [
+            .init(id:"mg",name:"ミリグラム",toBase:{$0/1000},fromBase:{$0*1000}), .init(id:"g",name:"グラム",toBase:{$0},fromBase:{$0}), .init(id:"kg",name:"キログラム",toBase:{$0*1000},fromBase:{$0/1000}), .init(id:"t",name:"トン",toBase:{$0*1_000_000},fromBase:{$0/1_000_000})]),
+        .init(id: "temperature", name: "温度", units: [
+            .init(id:"c",name:"摂氏 ℃",toBase:{$0},fromBase:{$0}), .init(id:"f",name:"華氏 ℉",toBase:{($0-32)*5/9},fromBase:{$0*9/5+32}), .init(id:"k",name:"ケルビン K",toBase:{$0-273.15},fromBase:{$0+273.15})]),
+        .init(id: "speed", name: "速度", units: [
+            .init(id:"ms",name:"m/s",toBase:{$0},fromBase:{$0}), .init(id:"kmh",name:"km/h",toBase:{$0/3.6},fromBase:{$0*3.6}), .init(id:"mph",name:"mph",toBase:{$0*0.44704},fromBase:{$0/0.44704})])
+    ]
     @State private var value = 1.0
-    @State private var from = 1.0
-    @State private var to = 1000.0
+    @State private var categoryID = "length"
+    @State private var fromID = "m"
+    @State private var toID = "km"
+    private var category: Category { categories.first(where: { $0.id == categoryID }) ?? categories[0] }
+    private var result: Double { let from=category.units.first(where:{$0.id==fromID}) ?? category.units[0], to=category.units.first(where:{$0.id==toID}) ?? category.units[0]; return to.fromBase(from.toBase(value)) }
     var body: some View {
         Form {
             Section("値") { TextField("値", value: $value, format: .number).keyboardType(.decimalPad) }
-            Section("長さ") {
-                Picker("変換元", selection: $from) { Text("m").tag(1.0); Text("km").tag(1000.0); Text("cm").tag(0.01); Text("mm").tag(0.001) }
-                Picker("変換先", selection: $to) { Text("m").tag(1.0); Text("km").tag(1000.0); Text("cm").tag(0.01); Text("mm").tag(0.001) }
+            Section("種類") { Picker("カテゴリ", selection: $categoryID) { ForEach(categories) { Text($0.name).tag($0.id) } }.onChange(of: categoryID) { let units=category.units; fromID=units[0].id; toID=units[min(1,units.count-1)].id } }
+            Section("単位") {
+                Picker("変換元", selection: $fromID) { ForEach(category.units) { Text($0.name).tag($0.id) } }
+                Picker("変換先", selection: $toID) { ForEach(category.units) { Text($0.name).tag($0.id) } }
             }
-            Section("結果") { Text((value * from / to).formatted()).font(.title2.monospacedDigit()) }
+            Section("変換結果") { Text(result.formatted(.number.precision(.fractionLength(0...8)))).font(.title2.monospacedDigit()).textSelection(.enabled) }
         }
     }
 }

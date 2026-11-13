@@ -17,19 +17,24 @@ struct PlusKosenApp: App {
 
 private struct AppRootContainer: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var settings: AppSettings
     @State private var showsOpening = true
 
     var body: some View {
         ZStack {
             RootView()
                 .allowsHitTesting(!showsOpening)
-            if showsOpening {
+            if showsOpening && !settings.hideOpeningAnimation {
                 OpeningAnimationView(reduceMotion: reduceMotion)
                     .transition(.opacity.combined(with: .scale(scale: 1.04)))
                     .zIndex(10)
             }
         }
+        .statusBarHidden(settings.focusMode)
+        .persistentSystemOverlays(settings.focusMode ? .hidden : .automatic)
+        .transaction { transaction in if settings.lightweightMode { transaction.animation = nil } }
         .task {
+            if settings.hideOpeningAnimation { showsOpening = false; return }
             try? await Task.sleep(for: .milliseconds(reduceMotion ? 450 : 1450))
             withAnimation(.easeInOut(duration: reduceMotion ? 0.15 : 0.4)) { showsOpening = false }
         }
@@ -39,7 +44,9 @@ private struct AppRootContainer: View {
 @MainActor
 final class AppSettings: ObservableObject {
     @AppStorage("appearance") var appearance = "system" { willSet { objectWillChange.send() } }
-    @AppStorage("webViewDarkMode") var webViewDarkMode = true { willSet { objectWillChange.send() } }
+    @AppStorage("focusMode") var focusMode = false { willSet { objectWillChange.send() } }
+    @AppStorage("hideOpeningAnimation") var hideOpeningAnimation = false { willSet { objectWillChange.send() } }
+    @AppStorage("lightweightMode") var lightweightMode = false { willSet { objectWillChange.send() } }
     @AppStorage("trainFavorites") private var trainFavoritesValue = "" { willSet { objectWillChange.send() } }
     @AppStorage("courseBookmarks") private var courseBookmarksValue = "" { willSet { objectWillChange.send() } }
 

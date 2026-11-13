@@ -36,11 +36,12 @@ struct NativeContentHistory: Hashable {
 
 @MainActor
 final class NativeContentPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
-    enum Kind { case detail, history }
+    enum Kind { case detail, history, results }
     @Published var isLoading = true
     @Published var errorMessage: String?
     @Published var detail: NativeContentDetail?
     @Published var history: NativeContentHistory?
+    @Published var results: NativeContentHistory?
 
     private let url: URL
     private let kind: Kind
@@ -82,7 +83,8 @@ final class NativeContentPageLoader: NSObject, ObservableObject, WKNavigationDel
         authenticationStep = 0
         switch kind {
         case .detail: extractDetail(webView)
-        case .history: extractHistory(webView)
+        case .history: extractHistory(webView, isResults: false)
+        case .results: extractHistory(webView, isResults: true)
         }
     }
 
@@ -168,7 +170,7 @@ final class NativeContentPageLoader: NSObject, ObservableObject, WKNavigationDel
         }
     }
 
-    private func extractHistory(_ webView: WKWebView) {
+    private func extractHistory(_ webView: WKWebView, isResults: Bool) {
         let script = #"""
         (() => {
           const clean = value => (value || '').replace(/\s+/g, ' ').trim();
@@ -190,7 +192,8 @@ final class NativeContentPageLoader: NSObject, ObservableObject, WKNavigationDel
         }
         evaluate(script) { data in
             guard let data, let value = try? JSONDecoder().decode(Payload.self, from: data) else { self.isLoading = false; self.errorMessage = "履歴を解析できませんでした。"; return }
-            self.history = NativeContentHistory(title: value.title, type: value.type, usageSummary: value.usageSummary, columns: value.columns, rows: value.rows, tabs: value.tabs.map { .init(id: $0.id, label: $0.label, url: $0.url, isActive: $0.isActive) })
+            let page = NativeContentHistory(title: value.title, type: value.type, usageSummary: value.usageSummary, columns: value.columns, rows: value.rows, tabs: value.tabs.map { .init(id: $0.id, label: $0.label, url: $0.url, isActive: $0.isActive) })
+            if isResults { self.results = page } else { self.history = page }
             self.isLoading = false
         }
     }
@@ -266,6 +269,40 @@ struct NativeContentHistoryView: View {
     }
 }
 
+struct NativeContentResultsView: View {
+    @StateObject private var loader: NativeContentPageLoader
+    init(url: URL) { _loader = StateObject(wrappedValue: NativeContentPageLoader(url: url, kind: .results)) }
+    var body: some View {
+        Group {
+            if loader.isLoading { NativePagePlaceholder() }
+            else if let error = loader.errorMessage { ContentUnavailableView("結果を取得できません", systemImage: "exclamationmark.triangle", description: Text(error)) }
+            else if let results = loader.results {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 14) {
+                        ContentPageHeader(title: results.title, type: results.type, symbol: "chart.bar.doc.horizontal.fill", color: .purple)
+                        ContentTabs(tabs: results.tabs)
+                        AppSectionHeader(title: "結果履歴", subtitle: "\(results.rows.count)件", symbol: "checkmark.seal.fill")
+                        if results.rows.isEmpty { ContentUnavailableView("結果はありません", systemImage: "chart.bar.xaxis") }
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 12)], spacing: 12) {
+                            ForEach(Array(results.rows.enumerated()), id: \.offset) { rowIndex, row in
+                                VStack(alignment: .leading, spacing: 9) {
+                                    Text("#\(rowIndex + 1)").font(.caption.bold()).foregroundStyle(.purple).padding(.horizontal, 8).padding(.vertical, 4).background(.purple.opacity(0.12), in: Capsule())
+                                    ForEach(Array(row.enumerated()), id: \.offset) { index, cell in
+                                        HStack(alignment: .top) {
+                                            Text(index < results.columns.count ? results.columns[index] : "項目 \(index + 1)").font(.caption).foregroundStyle(.secondary).frame(maxWidth: 110, alignment: .leading)
+                                            Text(cell).font(.subheadline.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+                                        }
+                                    }
+                                }.padding(14).appCard(cornerRadius: 16)
+                            }
+                        }
+                    }.padding(16).appReadableContentWidth()
+                }.refreshable { loader.reload() }.appScreenBackground()
+            }
+        }.navigationTitle("結果履歴").navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 private struct ContentPageHeader: View {
     let title: String; let type: String; let symbol: String; let color: Color
     var body: some View {
@@ -296,7 +333,13 @@ private struct ContentTabs: View {
 
 private struct ContentTabDestination: View {
     let url: URL
-    var body: some View { Group { if url.path.contains("history") { NativeContentHistoryView(url: url) } else { NativeContentDetailView(url: url) } } }
+    var body: some View {
+        Group {
+            if url.path.contains("results") || url.path.contains("question_results") { NativeContentResultsView(url: url) }
+            else if url.path.contains("history") { NativeContentHistoryView(url: url) }
+            else { NativeContentDetailView(url: url) }
+        }
+    }
 }
 
 private struct NativeInfoSection<Content: View>: View {

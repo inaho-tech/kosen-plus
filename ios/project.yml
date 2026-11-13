@@ -14,9 +14,6 @@ targets:
     platform: iOS
     sources:
       - path: PlusKosen
-    resources:
-      - path: ../app/src/main/assets/vendor/darkreader/darkreader-4.9.134.min.js
-      - path: ../app/src/main/assets/vendor/darkreader/LICENSE.txt
     info:
       path: PlusKosen/Info.plist
       properties:

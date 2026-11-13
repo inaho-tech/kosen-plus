@@ -36,10 +36,12 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
     static let loginURL = URL(string: "https://webclass.kosen-k.go.jp/webclass/login.php?auth_mode=SAML")!
     static let logoutURL = URL(string: "https://webclass.kosen-k.go.jp/webclass/logout.php")!
     static let messagesURL = URL(string: "https://webclass.kosen-k.go.jp/webclass/messages.php/inbox")!
+    static let accountURL = URL(string: "https://webclass.kosen-k.go.jp/webclass/user.php/config?acs_=a0008c6c")!
 
     @Published private(set) var loginState: LoginState = .checking
     @Published private(set) var courses: [WebClassCourse] = []
     @Published private(set) var userName = ""
+    @Published private(set) var email = ""
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var years: [WebClassOption] = []
@@ -66,6 +68,7 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
         if CommandLine.arguments.contains("-ui-preview") {
             loginState = .signedIn
             userName = "高専 太郎"
+            email = "student@example.ac.jp"
             courses = [
                 WebClassCourse(title: "情報工学", url: Self.homeURL, code: "2026-INFO", isDueSoon: true, unreadCount: 2, day: "月", period: 1),
                 WebClassCourse(title: "電気電子回路", url: Self.homeURL, code: "2026-EE", isDueSoon: false, unreadCount: 0, day: "火", period: 2),
@@ -157,6 +160,7 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
             loginState = .signedOut
             courses = []
             userName = ""
+            email = ""
             isLoading = false
             requestedLogout = false
             if wasLogout { Task { await WebClassCookieVault.clear() } }
@@ -193,6 +197,7 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
             loginState = .signedOut
             courses = []
             userName = ""
+            email = ""
             isLoading = false
             return
         }
@@ -214,12 +219,20 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
         (() => {
           const absolute = value => { try { return new URL(value, location.href).href; } catch (_) { return value || ''; } };
           const clean = value => (value || '').replace(/\s+/g, ' ').replace(/^[»›]\s*/, '').trim();
-          const selectors = ['#menu li.dropdown > a.dropdown-toggle', '.user_name', '.header_user_name', '[class*="user-name"]'];
           let userName = '';
-          for (const selector of selectors) {
-            const values = [...document.querySelectorAll(selector)].map(e => clean(e.childNodes[0]?.textContent || e.textContent));
-            userName = values.find(v => v && !/language|言語/i.test(v)) || userName;
-            if (userName) break;
+          for (const item of document.querySelectorAll('#menu li.dropdown')) {
+            const toggle = item.querySelector(':scope > a.dropdown-toggle');
+            if (item.querySelector('a[href*="user.php/config"]') && toggle) {
+              userName = clean(toggle.childNodes[0]?.textContent || toggle.textContent); break;
+            }
+          }
+          if (!userName) {
+            const selectors = ['#menu .visible-xs-block li.dropdown > a.dropdown-toggle', '.user_name', '.header_user_name', '[class*="user-name"]'];
+            for (const selector of selectors) {
+              const values = [...document.querySelectorAll(selector)].map(e => clean(e.childNodes[0]?.textContent || e.textContent));
+              userName = values.find(v => v && !/language|言語/i.test(v)) || userName;
+              if (userName) break;
+            }
           }
           const seen = new Set();
           const courses = [];
@@ -279,7 +292,33 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
                 self.currentYear = payload.currentYear
                 self.currentSemester = payload.currentSemester
                 self.errorMessage = nil
+                self.refreshProfileEmail()
                 Task { await WebClassCookieVault.save() }
+            }
+        }
+    }
+
+    private func refreshProfileEmail() {
+        Task {
+            let cookies = await withCheckedContinuation { continuation in
+                WKWebsiteDataStore.default().httpCookieStore.getAllCookies { continuation.resume(returning: $0) }
+            }
+            var request = URLRequest(url: Self.accountURL, cachePolicy: .reloadIgnoringLocalCacheData)
+            let cookieHeader = HTTPCookie.requestHeaderFields(with: cookies)["Cookie"]
+            if let cookieHeader { request.setValue(cookieHeader, forHTTPHeaderField: "Cookie") }
+            guard let (data, response) = try? await URLSession.shared.data(for: request),
+                  (response as? HTTPURLResponse)?.statusCode == 200,
+                  let html = String(data: data, encoding: .utf8) else { return }
+            let patterns = [
+                #"name=[\"']email[\"'][^>]*value=[\"']([^\"']+)[\"']"#,
+                #"value=[\"']([^\"']+)[\"'][^>]*name=[\"']email[\"']"#
+            ]
+            for pattern in patterns {
+                guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+                      let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+                      let range = Range(match.range(at: 1), in: html) else { continue }
+                email = String(html[range]).replacingOccurrences(of: "&amp;", with: "&")
+                break
             }
         }
     }

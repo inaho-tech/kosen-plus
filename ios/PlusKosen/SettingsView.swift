@@ -15,6 +15,9 @@ struct SettingsView: View {
                         .font(.system(size: 66)).foregroundStyle(.indigo)
                         .symbolRenderingMode(.hierarchical)
                     Text(webClass.userName.isEmpty ? "WebClass ユーザー" : webClass.userName).font(.title2.bold()).lineLimit(1)
+                    if !webClass.email.isEmpty {
+                        Label(webClass.email, systemImage: "envelope.fill").font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
+                    }
                     Label(webClass.loginState == .signedIn ? "ログイン中" : webClass.loginState == .checking ? "セッションを確認中" : "未ログイン", systemImage: webClass.loginState == .signedIn ? "checkmark.circle.fill" : "person.crop.circle.badge.exclamationmark")
                         .font(.subheadline).foregroundStyle(webClass.loginState == .signedIn ? Color.green : Color.secondary)
                     HStack(spacing: 18) {
@@ -46,8 +49,17 @@ struct SettingsView: View {
                 } label: {
                     IOSSettingsRow(symbol: "circle.lefthalf.filled", color: .indigo, title: "アプリのテーマ", subtitle: themeLabel, trailingValue: themeLabel)
                 }.foregroundStyle(.primary)
-                Toggle(isOn: $settings.webViewDarkMode) {
-                    IOSSettingsRow(symbol: "moon.stars.fill", color: .purple, title: "Webページもダークにする", subtitle: "Dark ReaderをWebViewへ適用")
+            }
+
+            Section("表示と操作") {
+                Toggle(isOn: $settings.focusMode) {
+                    IOSSettingsRow(symbol: "scope", color: .blue, title: "フォーカスモード", subtitle: "システム表示を隠して学習に集中")
+                }
+                Toggle(isOn: $settings.hideOpeningAnimation) {
+                    IOSSettingsRow(symbol: "forward.end.fill", color: .orange, title: "起動アニメーションを省略", subtitle: "次回起動からすぐホームを表示")
+                }
+                Toggle(isOn: $settings.lightweightMode) {
+                    IOSSettingsRow(symbol: "bolt.fill", color: .green, title: "軽量モード", subtitle: "画面遷移アニメーションを抑制")
                 }
             }
 
@@ -115,13 +127,6 @@ struct AppInfoView: View {
                 Link("WebClass", destination: URL(string: "https://webclass.kosen-k.go.jp/webclass/")!)
                 Link("高専Webシラバス", destination: URL(string: "https://syllabus.kosen-k.go.jp/")!)
                 Link("どこトレ（アプリ内名称：電車）", destination: URL(string: "https://doko-train.jp/sp/")!)
-            }
-            Section("オープンソースライセンス") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Dark Reader").font(.headline)
-                    Text("MIT License — Copyright (c) 2014–present Alexander Shutau").font(.caption).foregroundStyle(.secondary)
-                    Link("ライセンス原文", destination: URL(string: "https://github.com/darkreader/darkreader/blob/main/LICENSE")!)
-                }.padding(.vertical, 6)
             }
         }.navigationTitle("情報・ライセンス")
     }

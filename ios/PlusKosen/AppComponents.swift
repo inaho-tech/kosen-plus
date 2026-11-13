@@ -48,6 +48,19 @@ extension View {
     func appReadableContentWidth(_ width: CGFloat = 980) -> some View {
         self.frame(maxWidth: width).frame(maxWidth: .infinity)
     }
+
+    @ViewBuilder
+    func liquidGlassPill() -> some View {
+#if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: Capsule())
+        } else {
+            self.background(.ultraThinMaterial, in: Capsule()).overlay(Capsule().stroke(.white.opacity(0.28), lineWidth: 0.8))
+        }
+#else
+        self.background(.ultraThinMaterial, in: Capsule()).overlay(Capsule().stroke(.white.opacity(0.28), lineWidth: 0.8))
+#endif
+    }
 }
 
 private struct LiquidGlassCardModifier: ViewModifier {
