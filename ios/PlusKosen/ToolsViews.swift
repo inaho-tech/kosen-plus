@@ -22,7 +22,7 @@ struct ToolsView: View {
                 toolGrid(schoolTools)
                 AppSectionHeader(title: "学習ツール", subtitle: "集中・記録・計算", symbol: "hammer.fill").padding(.top, 6)
                 toolGrid(studyTools)
-            }.padding()
+            }.padding().appReadableContentWidth()
         }
         .appScreenBackground()
         .navigationTitle("ツール")
@@ -199,9 +199,4 @@ struct KarnaughView: View {
 }
 
 private extension String { func leftPadded(to count: Int) -> String { String(repeating: "0", count: Swift.max(0, count-self.count)) + self } }
-
-struct GamePlaceholderView: View {
-    let title: String
-    var body: some View { ContentUnavailableView("\(title)を移植中", systemImage: "gamecontroller.fill", description: Text("ゲームエンジン部分をSwiftUIへ置き換えています")) }
-}
 

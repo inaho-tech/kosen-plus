@@ -7,27 +7,60 @@ private struct CourseDayGroup: Identifiable {
 }
 
 struct RootView: View {
-    @State private var selection = 0
+    private enum AppTab: Int, CaseIterable, Identifiable {
+        case home, syllabus, timetable, tools, profile
+        var id: Self { self }
+        var title: String { switch self { case .home: "ホーム"; case .syllabus: "シラバス"; case .timetable: "時刻表"; case .tools: "ツール"; case .profile: "マイページ" } }
+        var symbol: String { switch self { case .home: "graduationcap.fill"; case .syllabus: "doc.text.fill"; case .timetable: "clock.fill"; case .tools: "hammer.fill"; case .profile: "person.crop.circle.fill" } }
+    }
+
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var selection = AppTab.home
 
     var body: some View {
-        TabView(selection: $selection) {
-            NavigationStack { HomeView() }
-                .tabItem { Label("ホーム", systemImage: "graduationcap.fill") }.tag(0)
-            NavigationStack { SyllabusView() }
-                .tabItem { Label("シラバス", systemImage: "doc.text.fill") }.tag(1)
-            NavigationStack { TimetableHubView() }
-                .tabItem { Label("時刻表", systemImage: "clock.fill") }.tag(2)
-            NavigationStack { ToolsView() }
-                .tabItem { Label("ツール", systemImage: "hammer.fill") }.tag(3)
-            NavigationStack { SettingsView() }
-                .tabItem { Label("マイページ", systemImage: "person.crop.circle.fill") }.tag(4)
+        Group {
+            if horizontalSizeClass == .regular {
+                NavigationSplitView {
+                    List(AppTab.allCases) { tab in
+                        Button { selection = tab } label: {
+                            Label(tab.title, systemImage: tab.symbol).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(selection == tab ? Color.indigo.opacity(0.13) : Color.clear)
+                    }
+                    .navigationTitle("高専プラス")
+                    .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
+                } detail: {
+                    NavigationStack { tabContent(selection) }
+                }
+                .navigationSplitViewStyle(.balanced)
+            } else {
+                TabView(selection: $selection) {
+                    ForEach(AppTab.allCases) { tab in
+                        NavigationStack { tabContent(tab) }
+                            .tabItem { Label(tab.title, systemImage: tab.symbol) }
+                            .tag(tab)
+                    }
+                }
+            }
         }
         .tint(.indigo)
+    }
+
+    @ViewBuilder private func tabContent(_ tab: AppTab) -> some View {
+        switch tab {
+        case .home: HomeView()
+        case .syllabus: SyllabusView()
+        case .timetable: TimetableHubView()
+        case .tools: ToolsView()
+        case .profile: SettingsView()
+        }
     }
 }
 
 struct HomeView: View {
     @EnvironmentObject private var session: WebClassSession
+    @EnvironmentObject private var settings: AppSettings
     @State private var showLogin = false
     @State private var query = ""
     @State private var filter = CourseFilter.all
@@ -36,6 +69,7 @@ struct HomeView: View {
     private enum CourseFilter: String, CaseIterable, Identifiable {
         case all = "すべて"
         case tasks = "期限間近"
+        case bookmarks = "お気に入り"
         case hidden = "非表示"
         var id: Self { self }
     }
@@ -49,6 +83,7 @@ struct HomeView: View {
             let matchesFilter = switch filter {
             case .all: !hidden
             case .tasks: !hidden && course.isDueSoon
+            case .bookmarks: !hidden && settings.courseBookmarks.contains(course.id)
             case .hidden: hidden
             }
             return matchesQuery && matchesFilter
@@ -147,15 +182,16 @@ struct HomeView: View {
                             AppSectionHeader(title: group.day, subtitle: "\(group.courses.count)件", symbol: group.day == "その他" ? "square.grid.2x2" : "calendar")
                                 .padding(.top, 5)
                             ForEach(group.courses) { course in
-                                NavigationLink { CourseContentsView(course: course) } label: { CourseCard(course: course) }.buttonStyle(.plain)
+                                NavigationLink { CourseContentsView(course: course) } label: { CourseCard(course: course, bookmarked: settings.courseBookmarks.contains(course.id)) }.buttonStyle(.plain)
                                     .contextMenu {
+                                        Button(settings.courseBookmarks.contains(course.id) ? "お気に入りから削除" : "お気に入りに追加", systemImage: settings.courseBookmarks.contains(course.id) ? "bookmark.slash" : "bookmark") { settings.toggleCourseBookmark(course.id) }
                                         Button(filter == .hidden ? "一覧に戻す" : "非表示にする", systemImage: filter == .hidden ? "eye" : "eye.slash") { toggleHidden(course.id) }
                                     }
                             }
                         }
                     }
                 }
-            }.padding(16)
+            }.padding(16).appReadableContentWidth()
         }
         .refreshable { session.refresh() }
         .appScreenBackground()
@@ -184,6 +220,7 @@ private struct ScheduleMenuLabel: View {
 
 private struct CourseCard: View {
     let course: WebClassCourse
+    let bookmarked: Bool
     private var appearance: CourseAppearance { .course(course.title) }
     var body: some View {
         HStack(spacing: 14) {
@@ -199,6 +236,7 @@ private struct CourseCard: View {
             if course.isDueSoon {
                 Image(systemName: "exclamationmark.clock.fill").foregroundStyle(.orange)
             }
+            if bookmarked { Image(systemName: "bookmark.fill").foregroundStyle(.indigo) }
             if course.unreadCount > 0 {
                 Text("\(course.unreadCount)").font(.caption.bold()).foregroundStyle(.white)
                     .padding(.horizontal, 7).padding(.vertical, 3).background(.red, in: Capsule())

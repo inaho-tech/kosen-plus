@@ -108,82 +108,6 @@ private struct IOSSettingsRow: View {
     }
 }
 
-private struct ProfileStatus: View {
-    let symbol: String
-    let title: String
-    let value: String
-    var body: some View {
-        HStack(spacing: 9) {
-            Image(systemName: symbol).foregroundStyle(.indigo)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.caption).foregroundStyle(.secondary)
-                Text(value).font(.subheadline.weight(.semibold))
-            }
-        }.padding(12).frame(maxWidth: .infinity, alignment: .leading).appCard(cornerRadius: 14)
-    }
-}
-
-private struct SettingsCard<Content: View>: View {
-    let title: String
-    let symbol: String
-    let content: Content
-    init(title: String, symbol: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.symbol = symbol
-        self.content = content()
-    }
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Label(title, systemImage: symbol)
-                .font(.headline).foregroundStyle(.indigo)
-                .padding(.horizontal, 15).padding(.top, 14).padding(.bottom, 7)
-            content
-        }.appCard(cornerRadius: 18)
-    }
-}
-
-private struct SettingsLinkRow: View {
-    let symbol: String
-    let color: Color
-    let title: String
-    let subtitle: String
-    var showsChevron = true
-    var body: some View {
-        HStack(spacing: 13) {
-            AppIconTile(symbol: symbol, color: color, size: 40)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.body.weight(.semibold)).foregroundStyle(.primary)
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            if showsChevron { Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary) }
-        }.padding(.horizontal, 14).frame(maxWidth: .infinity, minHeight: 66, alignment: .leading).contentShape(Rectangle())
-    }
-}
-
-private struct SettingsToggleRow: View {
-    let symbol: String
-    let color: Color
-    let title: String
-    let subtitle: String
-    @Binding var isOn: Bool
-    var body: some View {
-        Toggle(isOn: $isOn) {
-            HStack(spacing: 13) {
-                AppIconTile(symbol: symbol, color: color, size: 40)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.body.weight(.semibold))
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
-                }
-            }
-        }.padding(.horizontal, 14).frame(maxWidth: .infinity, minHeight: 66).contentShape(Rectangle())
-    }
-}
-
-private struct SettingsDivider: View {
-    var body: some View { Divider().padding(.leading, 67) }
-}
-
 struct AppInfoView: View {
     var body: some View {
         List {
@@ -204,11 +128,9 @@ struct AppInfoView: View {
 }
 
 struct DeveloperSettingsView: View {
-    @AppStorage("forceNewFeatures") private var forceNewFeatures = false
     @AppStorage("customWebClassUI") private var customWebClassUI = false
     var body: some View {
         Form {
-            Section { Toggle("常に新しい機能ポップアップを表示", isOn: $forceNewFeatures) }
             Section("危険なエリア") {
                 Toggle("教材に独自UIを反映", isOn: $customWebClassUI)
                 Text("WebClassの内部仕様変更により教材を正しく表示できなくなる場合があります。").font(.caption).foregroundStyle(.secondary)

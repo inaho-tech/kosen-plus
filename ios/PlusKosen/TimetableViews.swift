@@ -163,7 +163,7 @@ struct TrainStationListView: View {
                             }.buttonStyle(.plain)
                         }
                     }
-                    .padding(16)
+                    .padding(16).appReadableContentWidth()
                 }
                 .appScreenBackground()
             }

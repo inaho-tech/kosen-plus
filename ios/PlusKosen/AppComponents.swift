@@ -44,6 +44,10 @@ extension View {
     func appScreenBackground() -> some View {
         self.background(AppPalette.background.ignoresSafeArea())
     }
+
+    func appReadableContentWidth(_ width: CGFloat = 980) -> some View {
+        self.frame(maxWidth: width).frame(maxWidth: .infinity)
+    }
 }
 
 private struct LiquidGlassCardModifier: ViewModifier {
