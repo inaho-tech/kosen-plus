@@ -223,7 +223,7 @@ struct NativeContentDetailView: View {
                             }
                         }
                         if let url = detail.executionURL, detail.isAvailable {
-                            NavigationLink { WebClassView(startURL: url) } label: { Label("教材を開く", systemImage: "play.fill").font(.headline).frame(maxWidth: .infinity).frame(height: 52) }
+                            NavigationLink { WebClassView(startURL: url, warnsBeforeLeaving: true) } label: { Label("教材を開く", systemImage: "play.fill").font(.headline).frame(maxWidth: .infinity).frame(height: 52) }
                                 .buttonStyle(.borderedProminent)
                         }
                     }.padding(16)

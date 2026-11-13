@@ -81,6 +81,40 @@ struct SyllabusDetailRow: Identifiable, Hashable {
     let value: String
 }
 
+struct SyllabusBasicInfo: Codable {
+    let school, year, subjectName, subjectCode, category, teachingFormat: String
+    let creditType, credits, department, targetYear, semester, weeklyHours: String
+    let textbook, teachers: String
+}
+
+struct SyllabusRubricItem: Codable, Identifiable {
+    let item, ideal, standard, notReached: String
+    var id: String { item + ideal }
+}
+
+struct SyllabusLesson: Codable, Identifiable {
+    let week, content, target: String
+    var id: String { week + content }
+}
+
+struct SyllabusEvaluation: Codable, Identifiable {
+    let name: String
+    let components: [String: Int]
+    let total: Int
+    var id: String { name }
+}
+
+struct StructuredSyllabusDetail: Codable {
+    let basicInfo: SyllabusBasicInfo
+    let goals: String
+    let rubric: [SyllabusRubricItem]
+    let departmentGoals: [String]
+    let overview, methodology, notes: String
+    let activeAttributes: [String: Bool]
+    let lessonPlan: [SyllabusLesson]
+    let evaluation: [SyllabusEvaluation]
+}
+
 private struct SubjectGroup: Identifiable {
     let category: String
     let subjects: [SyllabusSubject]
@@ -104,6 +138,7 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
     @Published var subjects: [SyllabusSubject] = []
     @Published var detailTitle = ""
     @Published var detailRows: [SyllabusDetailRow] = []
+    @Published var structuredSyllabus: StructuredSyllabusDetail?
     @Published var scoreGroups: [CourseScoreGroup] = []
     @Published var scoreMeta = CourseScorePageMeta(displayType: "", startDate: "", endDate: "")
     @Published var reports: [CourseReportItem] = []
@@ -356,29 +391,89 @@ final class DOMPageLoader: NSObject, ObservableObject, WKNavigationDelegate {
     private func extractSyllabusDetail(from webView: WKWebView) {
         let script = #"""
         (() => {
-          const clean = value => (value || '').replace(/\s+/g, ' ').trim();
-          const title = clean(document.querySelector('h1,h2,.page-header,.subject-name')?.textContent || document.title);
-          const rows = [];
-          document.querySelectorAll('table tr').forEach((row, index) => {
-            const cells = [...row.querySelectorAll('th,td')].map(cell => clean(cell.textContent)).filter(Boolean);
-            if (cells.length >= 2) rows.push({ id: `${index}`, label: cells[0], value: cells.slice(1).join(' ・ ') });
+          const clean = value => (value || '').replace(/[\t\r ]+/g, ' ').replace(/\n\s+/g, '\n').trim();
+          const multiline = element => clean(element?.innerText || element?.textContent || '');
+          const root = document.querySelector('#MainContent_SubjectSyllabus_UpdatePanelSyllabus') || document;
+          const heading = text => [...root.querySelectorAll('h3')].find(node => clean(node.textContent).includes(text));
+          const after = (text, selector) => {
+            let node = heading(text)?.nextElementSibling;
+            while (node) {
+              if (node.matches?.(selector)) return node;
+              const child = node.querySelector?.(selector); if (child) return child;
+              if (node.matches?.('h3')) break;
+              node = node.nextElementSibling;
+            }
+            return null;
+          };
+          const value = (table, label) => {
+            for (const th of table?.querySelectorAll('th') || []) {
+              if (clean(th.textContent) === label) {
+                let cell = th.nextElementSibling;
+                while (cell && cell.tagName !== 'TD') cell = cell.nextElementSibling;
+                return clean(cell?.textContent);
+              }
+            }
+            return '';
+          };
+          const basicTable = after('科目基礎情報', 'table');
+          const creditRaw = value(basicTable, '単位の種別と単位数');
+          const creditParts = creditRaw.split(':').map(clean);
+          const basicInfo = {
+            school:value(basicTable,'学校'), year:value(basicTable,'開講年度'), subjectName:value(basicTable,'授業科目'),
+            subjectCode:value(basicTable,'科目番号'), category:value(basicTable,'科目区分'), teachingFormat:value(basicTable,'授業形態'),
+            creditType:creditParts[0] || creditRaw, credits:creditParts.slice(1).join(':') || '', department:value(basicTable,'開設学科'),
+            targetYear:value(basicTable,'対象学年'), semester:value(basicTable,'開設期'), weeklyHours:value(basicTable,'週時間数'),
+            textbook:value(basicTable,'教科書/教材'), teachers:clean(root.querySelector('#Teachers')?.textContent) || value(basicTable,'担当教員')
+          };
+          const goals = multiline(after('到達目標', 'div'));
+          const rubric = [];
+          const rubricTable = root.querySelector('#MainContent_SubjectSyllabus_hyouka') || after('ルーブリック', 'table');
+          [...rubricTable?.querySelectorAll('tr') || []].slice(1).forEach(row => {
+            const cells=[...row.querySelectorAll('td,th')].map(cell=>clean(cell.textContent));
+            if(cells.length>=4 && cells[0]) rubric.push({item:cells[0],ideal:cells[1],standard:cells[2],notReached:cells[3]});
           });
-          document.querySelectorAll('dl').forEach((list, listIndex) => {
-            const labels = [...list.querySelectorAll('dt')];
-            labels.forEach((label, index) => {
-              const value = label.nextElementSibling?.matches('dd') ? clean(label.nextElementSibling.textContent) : '';
-              if (value) rows.push({ id: `dl-${listIndex}-${index}`, label: clean(label.textContent), value });
-            });
+          const departmentGoals=[];
+          const departmentGoalsDiv=after('学科の到達目標項目との関係','div');
+          [...departmentGoalsDiv?.querySelectorAll('div') || []].forEach(node=>{const text=clean(node.textContent);if(text)departmentGoals.push(text)});
+          if(departmentGoals.length===0 && multiline(departmentGoalsDiv)) departmentGoals.push(multiline(departmentGoalsDiv));
+          let overview='', methodology='', notes='';
+          const education=after('教育方法等','div');
+          [...education?.querySelectorAll('b,strong') || []].forEach(labelNode=>{
+            const label=clean(labelNode.textContent); let text=''; let node=labelNode.nextSibling;
+            while(node && !(node.nodeType===1 && /^(B|STRONG)$/.test(node.tagName))){ text += node.nodeType===1 && node.tagName==='BR' ? '\n' : (node.textContent || ''); node=node.nextSibling; }
+            text=clean(text);
+            if(label.includes('概要')) overview=text; else if(label.includes('授業の進め方')) methodology=text; else if(label.includes('注意点')) notes=text;
           });
-          return JSON.stringify({ title, rows });
+          const activeAttributes={};
+          const attributes=after('授業の属性','div');
+          [...attributes?.querySelectorAll('input[type=checkbox]') || []].forEach(box=>{
+            const label=clean(attributes.querySelector(`label[for="${box.id}"]`)?.textContent || box.nextSibling?.textContent);
+            if(label) activeAttributes[label]=box.checked;
+          });
+          const lessonPlan=[];
+          const lessons=root.querySelector('#lessonsTable') || after('授業計画','table');
+          [...lessons?.querySelectorAll('tr') || []].forEach(row=>{
+            const week=row.querySelector('th.week_number'); const cells=row.querySelectorAll('td');
+            if(week) lessonPlan.push({week:clean(week.textContent),content:multiline(cells[0]),target:multiline(cells[1])});
+          });
+          const evaluation=[];
+          const evaluationTable=root.querySelector('#MainContent_SubjectSyllabus_wariaiTable') || after('評価割合','table');
+          const evaluationRows=[...evaluationTable?.querySelectorAll('tr') || []];
+          const headerIndex=Math.max(0,evaluationRows.findIndex(row=>row.classList.contains('bg-success')));
+          const columns=[...evaluationRows[headerIndex]?.querySelectorAll('td,th') || []].map(cell=>clean(cell.textContent)).filter(Boolean);
+          evaluationRows.slice(headerIndex+1).forEach(row=>{
+            const name=clean(row.querySelector('th')?.textContent); if(!name)return;
+            const components={}; let total=0;
+            [...row.querySelectorAll('td')].forEach((cell,index)=>{const number=parseInt(clean(cell.textContent).replace('%',''))||0;const column=columns[index]||'';if(column==='合計')total=number;else if(column)components[column]=number;});
+            evaluation.push({name,components,total});
+          });
+          return JSON.stringify({ basicInfo, goals, rubric, departmentGoals, overview, methodology, notes, activeAttributes, lessonPlan, evaluation });
         })()
         """#
-        struct Payload: Decodable { let title: String; let rows: [Row] }
-        struct Row: Decodable { let id: String; let label: String; let value: String }
         evaluate(script) { data in
-            guard let data, let value = try? JSONDecoder().decode(Payload.self, from: data) else { return }
-            self.detailTitle = value.title
-            self.detailRows = value.rows.map { SyllabusDetailRow(id: $0.id, label: $0.label, value: $0.value) }
+            guard let data, let value = try? JSONDecoder().decode(StructuredSyllabusDetail.self, from: data) else { return }
+            self.structuredSyllabus = value
+            self.detailTitle = value.basicInfo.subjectName
             self.isLoading = false
         }
     }
@@ -450,8 +545,10 @@ struct CourseContentsView: View {
                         }
                         ForEach(filteredSections) { section in
                             AppSectionHeader(title: section.title, subtitle: "\(section.items.count)件")
-                            ForEach(section.items) { item in
-                                CourseContentCardView(item: item)
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 330), spacing: 12)], spacing: 12) {
+                                ForEach(section.items) { item in
+                                    CourseContentCardView(item: item)
+                                }
                             }
                         }
                     }.padding(16)
@@ -466,7 +563,7 @@ private struct CourseContentCardView: View {
     var body: some View {
         VStack(spacing: 0) {
             if let url = item.url, !item.isDisabled {
-                NavigationLink { WebClassView(startURL: url) } label: {
+                NavigationLink { WebClassView(startURL: url, warnsBeforeLeaving: true) } label: {
                     HStack(spacing: 0) {
                         ContentRow(item: item)
                         Spacer(minLength: 10)
@@ -533,8 +630,10 @@ private struct CourseScoresView: View {
                         ForEach(loader.scoreGroups) { group in
                             AppSectionHeader(title: group.name, subtitle: "\(group.items.count)件")
                             if group.totalMy != nil || group.totalCourse != nil { ScoreTotalCard(my: group.totalMy, course: group.totalCourse) }
-                            ForEach(group.items) { item in
-                                ScoreCard(item: item)
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 12)], spacing: 12) {
+                                ForEach(group.items) { item in
+                                    ScoreCard(item: item)
+                                }
                             }
                         }
                     }.padding(16)
@@ -625,8 +724,9 @@ private struct CourseReportsView: View {
             else {
                 ScrollView {
                     LazyVStack(spacing: 11) {
-                        ForEach(loader.reports) { report in
-                            VStack(alignment: .leading, spacing: 9) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 12)], spacing: 12) {
+                            ForEach(loader.reports) { report in
+                                VStack(alignment: .leading, spacing: 9) {
                                 HStack { Text(report.taskName).font(.headline); Spacer(); Text(report.result).font(.caption.bold()).foregroundStyle(report.result == "○" || report.result == "OK" ? Color.green : Color.secondary) }
                                 HStack { if !report.questionNumber.isEmpty { Text("設問 \(report.questionNumber)") }; Spacer(); Text(report.scoreText) }.font(.caption).foregroundStyle(.secondary)
                                 if !report.submissionDate.isEmpty { Label(report.submissionDate, systemImage: "calendar").font(.caption).foregroundStyle(.secondary) }
@@ -634,11 +734,12 @@ private struct CourseReportsView: View {
                                 if report.taskURL != nil || report.scoreURL != nil {
                                     HStack {
                                         Spacer()
-                                        if let url = report.taskURL { NavigationLink { WebClassView(startURL: url) } label: { Label("課題", systemImage: "doc.text").font(.caption.weight(.semibold)) } }
+                                        if let url = report.taskURL { NavigationLink { WebClassView(startURL: url, warnsBeforeLeaving: true) } label: { Label("課題", systemImage: "doc.text").font(.caption.weight(.semibold)) } }
                                         if let url = report.scoreURL { NavigationLink { WebClassView(startURL: url) } label: { Label("採点詳細", systemImage: "chart.bar.doc.horizontal").font(.caption.weight(.semibold)) } }
                                     }
                                 }
-                            }.padding(14).appCard()
+                                }.padding(14).appCard()
+                            }
                         }
                     }.padding(16)
                 }.refreshable { loader.reload() }.appScreenBackground()
@@ -694,16 +795,18 @@ struct SyllabusView: View {
                     LazyVStack(spacing: 12) {
                         ForEach(groups) { group in
                             AppSectionHeader(title: group.title, subtitle: "\(group.departments.count)件")
-                            ForEach(group.departments) { department in
-                                NavigationLink { SyllabusSubjectsView(department: department) } label: {
-                                    let appearance = CourseAppearance.department(department.name)
-                                    HStack(spacing: 13) {
-                                        AppIconTile(symbol: appearance.symbol, color: appearance.color)
-                                        Text(department.name).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
-                                        Spacer()
-                                        Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
-                                    }.padding(13).frame(height: 74).appCard()
-                                }.buttonStyle(.plain)
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 12)], spacing: 12) {
+                                ForEach(group.departments) { department in
+                                    NavigationLink { SyllabusSubjectsView(department: department) } label: {
+                                        let appearance = CourseAppearance.department(department.name)
+                                        HStack(spacing: 13) {
+                                            AppIconTile(symbol: appearance.symbol, color: appearance.color)
+                                            Text(department.name).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
+                                            Spacer()
+                                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
+                                        }.padding(13).frame(height: 74).appCard()
+                                    }.buttonStyle(.plain)
+                                }
                             }
                         }
                     }
@@ -774,10 +877,12 @@ struct SyllabusSubjectsView: View {
                         }
                         ForEach(grouped) { group in
                             AppSectionHeader(title: group.category, subtitle: "\(group.subjects.count)件")
-                            ForEach(group.subjects) { subject in
-                                if let url = subject.url {
-                                    NavigationLink { SyllabusDetailView(subject: subject, url: url) } label: { SubjectRow(subject: subject).padding(14).frame(minHeight: 98).appCard(cornerRadius: 16) }.buttonStyle(.plain)
-                                } else { SubjectRow(subject: subject).padding(14).frame(minHeight: 98).appCard(cornerRadius: 16) }
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 330), spacing: 12)], spacing: 12) {
+                                ForEach(group.subjects) { subject in
+                                    if let url = subject.url {
+                                        NavigationLink { SyllabusDetailView(subject: subject, url: url) } label: { SubjectRow(subject: subject).padding(14).frame(minHeight: 98).appCard(cornerRadius: 16) }.buttonStyle(.plain)
+                                    } else { SubjectRow(subject: subject).padding(14).frame(minHeight: 98).appCard(cornerRadius: 16) }
+                                }
                             }
                         }
                     }.padding(16)
@@ -824,35 +929,39 @@ struct SyllabusDetailView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 14) {
-                            SyllabusHeroCard(subject: subject, title: loader.detailTitle)
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(sectionGroups, id: \.0) { section in
-                                        Button { withAnimation(.easeInOut) { proxy.scrollTo(section.0, anchor: .top) } } label: {
-                                            Text(section.0).font(.caption.weight(.semibold)).padding(.horizontal, 12).frame(height: 34).appCard(cornerRadius: 17).contentShape(Capsule())
-                                        }.buttonStyle(.plain)
+                            if let detail = loader.structuredSyllabus {
+                                StructuredSyllabusContent(subject: subject, detail: detail, proxy: proxy)
+                            } else {
+                                SyllabusHeroCard(subject: subject, title: loader.detailTitle)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(sectionGroups, id: \.0) { section in
+                                            Button { withAnimation(.easeInOut) { proxy.scrollTo(section.0, anchor: .top) } } label: {
+                                                Text(section.0).font(.caption.weight(.semibold)).padding(.horizontal, 12).frame(height: 34).appCard(cornerRadius: 17).contentShape(Capsule())
+                                            }.buttonStyle(.plain)
+                                        }
                                     }
                                 }
-                            }
-                            ForEach(sectionGroups, id: \.0) { section in
-                                VStack(alignment: .leading, spacing: 11) {
-                                    AppSectionHeader(title: section.0, subtitle: "\(section.1.count)項目", symbol: sectionSymbol(section.0))
-                                    if section.0 == "授業計画" {
-                                        ForEach(Array(section.1.enumerated()), id: \.element.id) { index, row in SyllabusLessonRow(index: index + 1, row: row) }
-                                    } else {
-                                        VStack(spacing: 0) {
-                                            ForEach(Array(section.1.enumerated()), id: \.element.id) { index, row in
-                                                SyllabusDetailInfoRow(section: section.0, row: row)
-                                                if index < section.1.count - 1 { Divider().padding(.leading, 14) }
+                                ForEach(sectionGroups, id: \.0) { section in
+                                    VStack(alignment: .leading, spacing: 11) {
+                                        AppSectionHeader(title: section.0, subtitle: "\(section.1.count)項目", symbol: sectionSymbol(section.0))
+                                        if section.0 == "授業計画" {
+                                            ForEach(Array(section.1.enumerated()), id: \.element.id) { index, row in SyllabusLessonRow(index: index + 1, row: row) }
+                                        } else {
+                                            VStack(spacing: 0) {
+                                                ForEach(Array(section.1.enumerated()), id: \.element.id) { index, row in
+                                                    SyllabusDetailInfoRow(section: section.0, row: row)
+                                                    if index < section.1.count - 1 { Divider().padding(.leading, 14) }
+                                                }
                                             }
+                                            .appCard(cornerRadius: 16)
+                                            .overlay(alignment: .leading) { Rectangle().fill(sectionColor(section.0)).frame(width: 4) }
+                                            .clipShape(RoundedRectangle(cornerRadius: 16))
                                         }
-                                        .appCard(cornerRadius: 16)
-                                        .overlay(alignment: .leading) { Rectangle().fill(sectionColor(section.0)).frame(width: 4) }
-                                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                                    }
-                                }.id(section.0)
+                                    }.id(section.0)
+                                }
                             }
-                        }.padding(16)
+                        }.padding(16).appReadableContentWidth()
                     }
                     .appScreenBackground()
                 }
@@ -884,6 +993,184 @@ struct SyllabusDetailView: View {
 
     private func sectionColor(_ title: String) -> Color {
         switch title { case "評価割合": .purple; case "ルーブリック": .teal; case "授業計画": .orange; case "到達目標": .green; default: .indigo }
+    }
+}
+
+private struct StructuredSyllabusContent: View {
+    let subject: SyllabusSubject
+    let detail: StructuredSyllabusDetail
+    let proxy: ScrollViewProxy
+
+    private var sections: [String] {
+        var result = ["科目基礎情報"]
+        if !detail.goals.isEmpty { result.append("到達目標") }
+        if !detail.rubric.isEmpty { result.append("ルーブリック") }
+        if !detail.overview.isEmpty || !detail.methodology.isEmpty || !detail.notes.isEmpty { result.append("教育方法等") }
+        if !detail.lessonPlan.isEmpty { result.append("授業計画") }
+        if !detail.evaluation.isEmpty { result.append("評価割合") }
+        return result
+    }
+
+    private var basicEntries: [(String, String)] {
+        let info = detail.basicInfo
+        return [("学校", info.school), ("開講年度", info.year), ("科目番号", info.subjectCode), ("科目区分", info.category), ("授業形態", info.teachingFormat), ("開設学科", info.department), ("対象学年", info.targetYear), ("開設期", info.semester), ("週時間数", info.weeklyHours), ("教科書・教材", info.textbook)].filter { !$0.1.isEmpty }
+    }
+
+    var body: some View {
+        StructuredSyllabusHero(subject: subject, info: detail.basicInfo)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(sections, id: \.self) { section in
+                    Button { withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(section, anchor: .top) } } label: {
+                        Text(section).font(.caption.weight(.semibold)).padding(.horizontal, 12).frame(height: 34).appCard(cornerRadius: 17)
+                    }.buttonStyle(.plain)
+                }
+            }
+        }
+
+        SyllabusSection(title: "科目基礎情報", symbol: "info.circle.fill", color: .indigo) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 10)], spacing: 10) {
+                ForEach(basicEntries, id: \.0) { item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.0).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        Text(item.1).font(.subheadline).textSelection(.enabled)
+                    }.padding(12).frame(maxWidth: .infinity, minHeight: 64, alignment: .leading).background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 11))
+                }
+            }
+        }.id("科目基礎情報")
+
+        if !detail.goals.isEmpty {
+            SyllabusSection(title: "到達目標", symbol: "target", color: .green) {
+                Text(detail.goals).font(.body).lineSpacing(4).textSelection(.enabled)
+            }.id("到達目標")
+        }
+
+        if !detail.rubric.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                AppSectionHeader(title: "ルーブリック", subtitle: "\(detail.rubric.count)項目", symbol: "checklist.checked")
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 12)], spacing: 12) {
+                    ForEach(detail.rubric) { rubric in RubricCard(rubric: rubric) }
+                }
+            }.id("ルーブリック")
+        }
+
+        if !detail.overview.isEmpty || !detail.methodology.isEmpty || !detail.notes.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                AppSectionHeader(title: "教育方法等", symbol: "person.2.fill")
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 12)], spacing: 12) {
+                    if !detail.overview.isEmpty { MethodCard(title: "概要", symbol: "doc.text", text: detail.overview) }
+                    if !detail.methodology.isEmpty { MethodCard(title: "授業の進め方", symbol: "arrow.triangle.branch", text: detail.methodology) }
+                    if !detail.notes.isEmpty { MethodCard(title: "注意点", symbol: "exclamationmark.triangle", text: detail.notes) }
+                }
+            }.id("教育方法等")
+        }
+
+        if !detail.lessonPlan.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                AppSectionHeader(title: "授業計画", subtitle: "\(detail.lessonPlan.count)回", symbol: "calendar")
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 12)], spacing: 12) {
+                    ForEach(detail.lessonPlan) { lesson in LessonPlanCard(lesson: lesson) }
+                }
+            }.id("授業計画")
+        }
+
+        if !detail.evaluation.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                AppSectionHeader(title: "評価割合", subtitle: "\(detail.evaluation.count)項目", symbol: "chart.pie.fill")
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 12)], spacing: 12) {
+                    ForEach(detail.evaluation) { item in EvaluationCard(item: item) }
+                }
+            }.id("評価割合")
+        }
+    }
+}
+
+private struct SyllabusSection<Content: View>: View {
+    let title, symbol: String
+    let color: Color
+    let content: Content
+    init(title: String, symbol: String, color: Color, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.symbol = symbol
+        self.color = color
+        self.content = content()
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            AppSectionHeader(title: title, symbol: symbol)
+            content
+        }.padding(15).appCard(cornerRadius: 17).overlay(alignment: .leading) { Rectangle().fill(color).frame(width: 4) }.clipShape(RoundedRectangle(cornerRadius: 17))
+    }
+}
+
+private struct StructuredSyllabusHero: View {
+    let subject: SyllabusSubject
+    let info: SyllabusBasicInfo
+    private var appearance: CourseAppearance { .course(info.subjectName.isEmpty ? subject.name : info.subjectName) }
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            AppIconTile(symbol: appearance.symbol, color: appearance.color, size: 58)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(info.subjectName.isEmpty ? subject.name : info.subjectName).font(.title2.bold())
+                if !info.teachers.isEmpty { Label(info.teachers, systemImage: "person.fill").font(.subheadline).foregroundStyle(.secondary) }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) { chips }
+                    VStack(alignment: .leading, spacing: 6) { chips }
+                }
+            }
+        }.padding(17).frame(maxWidth: .infinity, alignment: .leading).appCard(cornerRadius: 19)
+    }
+    @ViewBuilder private var chips: some View {
+        if !info.targetYear.isEmpty { SyllabusChip(text: info.targetYear) }
+        if !info.credits.isEmpty { SyllabusChip(text: [info.creditType, info.credits].filter { !$0.isEmpty }.joined(separator: " ")) }
+        if !info.semester.isEmpty { SyllabusChip(text: info.semester) }
+    }
+}
+
+private struct SyllabusChip: View {
+    let text: String
+    var body: some View { Text(text).font(.caption.weight(.semibold)).foregroundStyle(.indigo).padding(.horizontal, 9).padding(.vertical, 5).background(.indigo.opacity(0.1), in: Capsule()) }
+}
+
+private struct RubricCard: View {
+    let rubric: SyllabusRubricItem
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(rubric.item).font(.headline)
+            criterion("理想的", rubric.ideal, .green)
+            criterion("標準的", rubric.standard, .orange)
+            criterion("未到達", rubric.notReached, .red)
+        }.padding(14).frame(maxWidth: .infinity, alignment: .leading).appCard(cornerRadius: 15)
+    }
+    private func criterion(_ title: String, _ text: String, _ color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) { Text(title).font(.caption.bold()).foregroundStyle(color); Text(text).font(.subheadline).textSelection(.enabled) }
+    }
+}
+
+private struct MethodCard: View {
+    let title, symbol, text: String
+    var body: some View { VStack(alignment: .leading, spacing: 8) { Label(title, systemImage: symbol).font(.headline).foregroundStyle(.indigo); Text(text).font(.subheadline).lineSpacing(3).textSelection(.enabled) }.padding(14).frame(maxWidth: .infinity, alignment: .leading).appCard(cornerRadius: 15) }
+}
+
+private struct LessonPlanCard: View {
+    let lesson: SyllabusLesson
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(lesson.week).font(.caption.bold()).foregroundStyle(.orange).frame(minWidth: 38, minHeight: 34).background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 6) { Text(lesson.content).font(.subheadline.bold()).textSelection(.enabled); if !lesson.target.isEmpty { Text(lesson.target).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) } }
+        }.padding(13).frame(maxWidth: .infinity, alignment: .leading).appCard(cornerRadius: 14)
+    }
+}
+
+private struct EvaluationCard: View {
+    let item: SyllabusEvaluation
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack { Text(item.name).font(.headline); Spacer(); if item.total > 0 { Text("\(item.total)%").font(.headline.monospacedDigit()).foregroundStyle(.purple) } }
+            ForEach(item.components.sorted(by: { $0.key < $1.key }), id: \.key) { component in
+                VStack(alignment: .leading, spacing: 3) { HStack { Text(component.key); Spacer(); Text("\(component.value)%").monospacedDigit() }.font(.caption); ProgressView(value: Double(component.value), total: 100).tint(.purple) }
+            }
+        }.padding(14).frame(maxWidth: .infinity, alignment: .leading).appCard(cornerRadius: 15)
     }
 }
 

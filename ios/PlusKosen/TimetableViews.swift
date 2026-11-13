@@ -154,13 +154,15 @@ struct TrainStationListView: View {
 
                         AppSectionHeader(title: "すべての駅", subtitle: "\(filtered.count)駅", symbol: "tram.fill")
                             .padding(.top, favorites.isEmpty ? 0 : 8)
-                        ForEach(filtered) { station in
-                            NavigationLink { TrainDetailView(station: station) } label: {
-                                StationCard(station: station, favorite: settings.trainFavorites.contains(station.id)) {
-                                    if settings.trainFavorites.contains(station.id) { pendingRemoval = station }
-                                    else { settings.toggleFavorite(station.id) }
-                                }
-                            }.buttonStyle(.plain)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 12)], spacing: 12) {
+                            ForEach(filtered) { station in
+                                NavigationLink { TrainDetailView(station: station) } label: {
+                                    StationCard(station: station, favorite: settings.trainFavorites.contains(station.id)) {
+                                        if settings.trainFavorites.contains(station.id) { pendingRemoval = station }
+                                        else { settings.toggleFavorite(station.id) }
+                                    }
+                                }.buttonStyle(.plain)
+                            }
                         }
                     }
                     .padding(16).appReadableContentWidth()

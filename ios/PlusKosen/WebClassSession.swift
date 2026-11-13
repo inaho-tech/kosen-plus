@@ -81,6 +81,15 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
     }
 
     private func beginStartup(restoredCookies: Bool) {
+        guard restoredCookies else {
+            startupAttempt = UUID()
+            isStartingSession = false
+            isLoading = false
+            attemptedSilentLogin = false
+            authenticationStep = 0
+            loginState = .signedOut
+            return
+        }
         isStartingSession = true
         attemptedSilentLogin = false
         authenticationStep = 0
@@ -88,7 +97,7 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
         startupAttempt = attempt
         refresh()
         Task {
-            try? await Task.sleep(for: .seconds(restoredCookies ? 30 : 20))
+            try? await Task.sleep(for: .seconds(30))
             guard startupAttempt == attempt, loginState == .checking else { return }
             isStartingSession = false
             isLoading = false

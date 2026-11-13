@@ -1,14 +1,18 @@
 import SwiftUI
 import WebKit
 import QuickLook
+import UIKit
 
 struct WebClassView: View {
     let startURL: URL
+    var warnsBeforeLeaving = false
     var onNavigation: ((URL) -> Void)? = nil
     @EnvironmentObject private var settings: AppSettings
+    @Environment(\.dismiss) private var dismiss
     @AppStorage("customWebClassUI") private var customWebClassUI = false
     @State private var progress = 0.0
     @State private var title = ""
+    @State private var showExitConfirmation = false
 
     var body: some View {
         WebContainer(url: startURL, darkMode: settings.webViewDarkMode, preferMobileCourseUI: customWebClassUI, progress: $progress, pageTitle: $title, onNavigation: onNavigation)
@@ -16,6 +20,22 @@ struct WebClassView: View {
             .background(settings.webViewDarkMode ? Color.black : Color(.systemBackground))
             .navigationTitle(title.isEmpty ? "WebClass" : title)
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(warnsBeforeLeaving)
+            .toolbar {
+                if warnsBeforeLeaving {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { showExitConfirmation = true } label: {
+                            Label("戻る", systemImage: "chevron.backward")
+                        }
+                    }
+                }
+            }
+            .alert("コンテンツを終了しますか？", isPresented: $showExitConfirmation) {
+                Button("終了して戻る", role: .destructive) { dismiss() }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                Text("実行中のコンテンツを終了します。学習状況が保存されない可能性があります。")
+            }
     }
 }
 
@@ -33,6 +53,10 @@ struct WebContainer: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
         config.defaultWebpagePreferences.allowsContentJavaScript = true
+        config.preferences.javaScriptCanOpenWindowsAutomatically = true
+        config.allowsInlineMediaPlayback = true
+        config.allowsAirPlayForMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
         if darkMode {
             let source = "document.documentElement.style.cssText+=';background:#000!important;color-scheme:dark!important';"
             config.userContentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false))
@@ -122,6 +146,42 @@ struct WebContainer: UIViewRepresentable {
             guard let mobile = parts.url, mobile != source else { decisionHandler(.allow); return }
             webView.load(URLRequest(url: mobile))
             decisionHandler(.cancel)
+        }
+
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+            guard navigationAction.targetFrame == nil, let requestURL = navigationAction.request.url else { return nil }
+            webView.load(URLRequest(url: requestURL))
+            return nil
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+            guard let presenter = Self.presenter(for: webView) else { completionHandler(); return }
+            let alert = UIAlertController(title: webView.title ?? "WebClass", message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler() })
+            presenter.present(alert, animated: true)
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+            guard let presenter = Self.presenter(for: webView) else { completionHandler(false); return }
+            let alert = UIAlertController(title: webView.title ?? "WebClass", message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "キャンセル", style: .cancel) { _ in completionHandler(false) })
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler(true) })
+            presenter.present(alert, animated: true)
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+            guard let presenter = Self.presenter(for: webView) else { completionHandler(nil); return }
+            let alert = UIAlertController(title: webView.title ?? "WebClass", message: prompt, preferredStyle: .alert)
+            alert.addTextField { $0.text = defaultText }
+            alert.addAction(UIAlertAction(title: "キャンセル", style: .cancel) { _ in completionHandler(nil) })
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak alert] _ in completionHandler(alert?.textFields?.first?.text) })
+            presenter.present(alert, animated: true)
+        }
+
+        private static func presenter(for webView: WKWebView) -> UIViewController? {
+            var controller = webView.window?.rootViewController
+            while let presented = controller?.presentedViewController { controller = presented }
+            return controller
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

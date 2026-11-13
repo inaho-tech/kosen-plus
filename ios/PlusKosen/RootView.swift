@@ -181,12 +181,14 @@ struct HomeView: View {
                         ForEach(groupedCourses) { group in
                             AppSectionHeader(title: group.day, subtitle: "\(group.courses.count)件", symbol: group.day == "その他" ? "square.grid.2x2" : "calendar")
                                 .padding(.top, 5)
-                            ForEach(group.courses) { course in
-                                NavigationLink { CourseContentsView(course: course) } label: { CourseCard(course: course, bookmarked: settings.courseBookmarks.contains(course.id)) }.buttonStyle(.plain)
-                                    .contextMenu {
-                                        Button(settings.courseBookmarks.contains(course.id) ? "お気に入りから削除" : "お気に入りに追加", systemImage: settings.courseBookmarks.contains(course.id) ? "bookmark.slash" : "bookmark") { settings.toggleCourseBookmark(course.id) }
-                                        Button(filter == .hidden ? "一覧に戻す" : "非表示にする", systemImage: filter == .hidden ? "eye" : "eye.slash") { toggleHidden(course.id) }
-                                    }
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 12)], spacing: 12) {
+                                ForEach(group.courses) { course in
+                                    NavigationLink { CourseContentsView(course: course) } label: { CourseCard(course: course, bookmarked: settings.courseBookmarks.contains(course.id)) }.buttonStyle(.plain)
+                                        .contextMenu {
+                                            Button(settings.courseBookmarks.contains(course.id) ? "お気に入りから削除" : "お気に入りに追加", systemImage: settings.courseBookmarks.contains(course.id) ? "bookmark.slash" : "bookmark") { settings.toggleCourseBookmark(course.id) }
+                                            Button(filter == .hidden ? "一覧に戻す" : "非表示にする", systemImage: filter == .hidden ? "eye" : "eye.slash") { toggleHidden(course.id) }
+                                        }
+                                }
                             }
                         }
                     }
