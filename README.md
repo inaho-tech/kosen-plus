@@ -1,25 +1,19 @@
-<div align="center">
-  <img src="ios/PlusKosen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="132" alt="Kosen+ app icon">
-
-  # Kosen+
-
-  **高専生活に必要な情報と道具を、ひとつのアプリに。**
-
-  WebClass、シラバス、時刻表、学習ツールを、見やすく素早く使える学生向けクライアントです。
-
-  ![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)
-  ![iOS](https://img.shields.io/badge/iOS-SwiftUI-000000?logo=apple&logoColor=white)
-  ![Kotlin](https://img.shields.io/badge/Kotlin-Compose-7F52FF?logo=kotlin&logoColor=white)
-  ![Status](https://img.shields.io/badge/status-development-5865F2)
-
-  <br><br>
-
-  <a href="https://github.com/duckcat-chan/kosen-plus/releases">
-    <img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="150" alt="Get it on GitHub">
-  </a>
-</div>
-
----
+<p align="center">
+  <img src="ios/PlusKosen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="88" alt="Kosen+ app icon">
+</p>
+<h1 align="center">Kosen+</h1>
+<p align="center">
+  <strong>高専生活に必要な情報と道具を、ひとつのアプリに。</strong><br>
+  WebClass、シラバス、時刻表、学習ツールを見やすくまとめた学生向けクライアントです。
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&amp;logoColor=white" alt="Android 8.0+">
+  <img src="https://img.shields.io/badge/iOS-SwiftUI-000000?logo=apple&amp;logoColor=white" alt="iOS SwiftUI">
+  <img src="https://img.shields.io/badge/Kotlin-Compose-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin Compose">
+</p>
+<p align="center">
+  <a href="https://github.com/duckcat-chan/kosen-plus/releases"><img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="120" alt="Get it on GitHub"></a>
+</p>
 
 ## Kosen+ について
 
