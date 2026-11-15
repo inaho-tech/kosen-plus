@@ -2,6 +2,7 @@
   <img src="ios/PlusKosen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="88" alt="Kosen+ app icon">
 </p>
 <h1 align="center">Kosen+</h1>
+<p align="center"><strong>木更津工業高等専門学校（木更津高専）向け</strong></p>
 <p align="center">
   <strong>高専生活に必要な情報と道具を、ひとつのアプリに。</strong><br>
   WebClass、シラバス、時刻表、学習ツールを見やすくまとめた学生向けクライアントです。
