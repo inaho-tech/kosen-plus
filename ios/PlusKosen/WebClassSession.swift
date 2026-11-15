@@ -219,6 +219,7 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
         (() => {
           const absolute = value => { try { return new URL(value, location.href).href; } catch (_) { return value || ''; } };
           const clean = value => (value || '').replace(/\s+/g, ' ').replace(/^[»›]\s*/, '').trim();
+          const dueSoonText = '締切が近い課題があります。';
           let userName = '';
           for (const item of document.querySelectorAll('#menu li.dropdown')) {
             const toggle = item.querySelector(':scope > a.dropdown-toggle');
@@ -260,14 +261,20 @@ final class WebClassSession: NSObject, ObservableObject, WKNavigationDelegate {
           document.querySelectorAll('#schedule-table a[href*="/course.php/"], .schedule-list a.course[href*="/course.php/"], a[href*="/course.php/"]').forEach(a => {
             const url = absolute(a.getAttribute('href'));
             if (!url || seen.has(url)) return;
-            let title = clean(a.textContent).replace(/新着メッセージ\s*\(?\d+\)?/g, '').trim();
-            if (!title || /開講時間外/.test(title)) return;
+            const rawTitle = clean(a.textContent);
+            const isDueSoon = rawTitle.includes(dueSoonText) || /期限間近|締切間近/.test(rawTitle);
+            let title = rawTitle
+              .replaceAll(dueSoonText, '')
+              .replace(/期限間近|締切間近/g, '')
+              .replace(/新着メッセージ\s*\(?\d+\)?/g, '')
+              .trim();
+            if (!title || /開講期間外/.test(rawTitle)) return;
             seen.add(url);
             const match = url.match(/course\.php\/([^/?#]+)/);
             const row = a.closest('tr, li, .course, .list-group-item') || a.parentElement;
             const badges = row ? [...row.querySelectorAll('.badge,.label-danger')].map(e => parseInt(e.textContent, 10) || 0) : [];
             const slot = schedule.get(url) || {};
-            courses.push({ title, url, code: match ? match[1] : '', isDueSoon: /期限間近|締切間近/.test(a.textContent), unreadCount: badges.reduce((sum, value) => sum + value, 0), day: slot.day || null, period: slot.period || null });
+            courses.push({ title, url, code: match ? match[1] : '', isDueSoon, unreadCount: badges.reduce((sum, value) => sum + value, 0), day: slot.day || null, period: slot.period || null });
           });
           return JSON.stringify({ userName, courses, years: yearData.values, semesters: semesterData.values, currentYear: yearData.current, currentSemester: semesterData.current });
         })()

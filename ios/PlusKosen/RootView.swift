@@ -20,18 +20,9 @@ struct RootView: View {
         TabView(selection: $selection) {
             ForEach(AppTab.allCases) { tab in
                 NavigationStack { tabContent(tab) }
-                    .toolbar(.hidden, for: .tabBar)
                     .tag(tab)
+                    .tabItem { Label(tab.title, systemImage: tab.symbol) }
             }
-        }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .background(.clear)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            PillNavigation(selection: $selection)
-                .padding(.horizontal, 14)
-                .padding(.top, 4)
-                .padding(.bottom, 5)
-                .background(Color.clear)
         }
         .tint(.indigo)
     }
@@ -44,66 +35,6 @@ struct RootView: View {
         case .tools: ToolsView()
         case .profile: SettingsView()
         }
-    }
-}
-
-private struct PillNavigation: View {
-    @Binding var selection: RootView.AppTab
-    @State private var dragLocation: CGFloat?
-
-    var body: some View {
-        GeometryReader { geometry in
-            let tabs = RootView.AppTab.allCases
-            let slotWidth = geometry.size.width / CGFloat(tabs.count)
-            let selectedIndex = CGFloat(tabs.firstIndex(of: selection) ?? 0)
-            let indicatorCenter = dragLocation ?? ((selectedIndex + 0.5) * slotWidth)
-            let activeIndex = dragLocation.map { min(max(Int($0 / slotWidth), 0), tabs.count - 1) } ?? Int(selectedIndex)
-
-            ZStack(alignment: .leading) {
-                Capsule().fill(.clear).liquidGlassPill()
-                Capsule()
-                    .fill(.primary.opacity(0.045))
-                    .frame(width: max(44, slotWidth - 8), height: 52)
-                    .offset(x: min(max(4, indicatorCenter - slotWidth / 2 + 4), geometry.size.width - slotWidth + 4))
-                    .liquidGlassSelection()
-                    .allowsHitTesting(false)
-                HStack(spacing: 0) {
-                    ForEach(Array(tabs.enumerated()), id: \.element) { index, tab in
-                        VStack(spacing: 3) {
-                            Image(systemName: tab.symbol).font(.system(size: 17, weight: .medium))
-                            Text(tab.title).font(.system(size: 10, weight: .medium)).lineLimit(1)
-                        }
-                        .foregroundStyle(activeIndex == index ? Color.indigo : Color.secondary)
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .contentShape(Rectangle())
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel(tab.title)
-                        .accessibilityAddTraits(activeIndex == index ? [.isButton, .isSelected] : .isButton)
-                        .accessibilityAction { withAnimation(.snappy(duration: 0.3)) { selection = tab } }
-                    }
-                }.padding(6)
-            }
-            .contentShape(Capsule())
-            .gesture(
-                DragGesture(minimumDistance: 0, coordinateSpace: .local)
-                    .onChanged { value in
-                        let x = min(max(value.location.x, slotWidth / 2), geometry.size.width - slotWidth / 2)
-                        dragLocation = x
-                    }
-                    .onEnded { value in
-                        let x = min(max(value.location.x, slotWidth / 2), geometry.size.width - slotWidth / 2)
-                        let index = min(max(Int(x / slotWidth), 0), tabs.count - 1)
-                        withAnimation(.snappy(duration: 0.3)) {
-                            selection = tabs[index]
-                            dragLocation = nil
-                        }
-                    }
-            )
-        }
-        .frame(maxWidth: 620)
-        .frame(height: 64)
-        .shadow(color: .black.opacity(0.08), radius: 12, y: 5)
-        .onChange(of: selection) { dragLocation = nil }
     }
 }
 
@@ -289,7 +220,11 @@ private struct CourseCard: View {
                 Text("\(course.unreadCount)").font(.caption.weight(.semibold)).foregroundStyle(.indigo)
                     .padding(.horizontal, 7).padding(.vertical, 3).background(.indigo.opacity(0.1), in: Capsule())
             } else if course.isDueSoon {
-                Image(systemName: "clock.badge.exclamationmark").foregroundStyle(.secondary)
+                Label("期限間近", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 7).padding(.vertical, 4)
+                    .background(.red.opacity(0.1), in: Capsule())
             } else if bookmarked {
                 Image(systemName: "bookmark.fill").foregroundStyle(.secondary)
             }
