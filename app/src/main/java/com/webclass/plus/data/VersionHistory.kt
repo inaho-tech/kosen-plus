@@ -13,6 +13,9 @@ data class VersionEntry(
 object VersionHistory {
 
     val entries: List<VersionEntry> = listOf(
+        VersionEntry("4.5.3", "2026-11-15", listOf(
+            "アップデートの確認・ダウンロード・インストール方法をGitHub Releases利用方式へ変更"
+        )),
         VersionEntry("4.5.0", "2026-11-09", listOf(
             "ツールタブを再設計し、主要機能へすぐアクセスできるクイックアクセスを追加"
         )),
