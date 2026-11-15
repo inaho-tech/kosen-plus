@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Kotlin-Compose-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin Compose">
 </p>
 <p align="center">
-  <a href="https://github.com/inaho-tech/kosen-plus/releases"><img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="120" alt="Get it on GitHub"></a>
+  <a href="https://github.com/inaho-tech/kosen-plus/releases"><img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="150" alt="Get it on GitHub"></a>
 </p>
 
 ## スクリーンショット
