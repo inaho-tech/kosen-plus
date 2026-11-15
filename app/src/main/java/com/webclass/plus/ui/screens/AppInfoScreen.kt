@@ -3,6 +3,8 @@ package com.webclass.plus.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -36,6 +38,9 @@ fun AppInfoScreen(
     var updateInfo by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var hasChecked by remember { mutableStateOf(false) }
+    var updateCheckFailed by remember { mutableStateOf(false) }
+    var pendingInstall by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
+    var showThirdPartyNotices by remember { mutableStateOf(false) }
     
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     
@@ -74,18 +79,18 @@ fun AppInfoScreen(
                         updateInfo = updateInfo,
                         isChecking = isCheckingUpdate,
                         hasChecked = hasChecked,
+                        checkFailed = updateCheckFailed,
                         onCheck = {
                             isCheckingUpdate = true
+                            updateCheckFailed = false
                             scope.launch {
                                 updateInfo = UpdateChecker.checkForUpdates()
+                                updateCheckFailed = updateInfo == null
                                 isCheckingUpdate = false
                                 hasChecked = true
                             }
                         },
-                        onUpdate = { url ->
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            context.startActivity(intent)
-                        }
+                        onUpdate = { pendingInstall = it }
                     )
                 }
             }
@@ -212,63 +217,27 @@ fun AppInfoScreen(
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-                        LicenseListItem("Dark Reader", "MIT License", "Copyright © 2026 Dark Reader Ltd.", "https://github.com/darkreader/darkreader")
+                        LicenseListItem("AndroidX（Compose・CameraX・Media3を含む）", "Apache License 2.0", "The Android Open Source Project")
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        LicenseListItem("Kotlin・Kotlin Coroutines", "Apache License 2.0", "JetBrains s.r.o. and contributors")
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        LicenseListItem("Gson・Guava・AutoValue annotations", "Apache License 2.0", "Google LLC and contributors")
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        LicenseListItem("Okio", "Apache License 2.0", "Square, Inc. and contributors")
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        LicenseListItem("PDFBox-Android", "Apache License 2.0", "Tom Roush and Apache PDFBox contributors")
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        LicenseListItem("Dark Reader", "MIT License", "Copyright © 2026 Dark Reader Ltd.")
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        LicenseListItem("jsoup", "MIT License", "Copyright © 2009–2024 Jonathan Hedley")
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        LicenseListItem("Bouncy Castle", "MIT License", "Copyright © 2000–2021 The Legion of the Bouncy Castle Inc.")
 
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        
-                        LicenseListItem("AndroidX Libraries", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("AndroidX Lifecycle", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("AndroidX Activity Compose", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("Jetpack Compose", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("Compose Foundation", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("Material Design 3 components", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("Material Icons", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("AndroidX Navigation", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("AndroidX WebKit", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("AndroidX DataStore", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("AndroidX Media3 (ExoPlayer)", "Apache License 2.0", "Copyright © The Android Open Source Project", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("Gson", "Apache License 2.0", "Copyright © Google Inc.", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("Kotlin", "Apache License 2.0", "Copyright © JetBrains s.r.o.", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("Kotlin Coroutines", "Apache License 2.0", "Copyright © JetBrains s.r.o.", "http://www.apache.org/licenses/LICENSE-2.0")
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("Android System Fonts (Roboto, Noto)", "Apache License 2.0 / Open Font License", "Copyright © The Android Open Source Project", "https://scripts.sil.org/OFL")
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Apache License summary footer
-                        Surface(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            shape = MaterialTheme.shapes.medium,
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                        OutlinedButton(
+                            onClick = { showThirdPartyNotices = true },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "Apache License 2.0",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "http://www.apache.org/licenses/LICENSE-2.0",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            Text("ライセンス本文を表示")
                         }
                         
                         Spacer(modifier = Modifier.height(8.dp))
@@ -279,6 +248,36 @@ fun AppInfoScreen(
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
+
+    pendingInstall?.let { update ->
+        UpdateInstallDialog(update = update, onDismiss = { pendingInstall = null })
+    }
+    if (showThirdPartyNotices) {
+        ThirdPartyNoticesDialog(onDismiss = { showThirdPartyNotices = false })
+    }
+}
+
+@Composable
+private fun ThirdPartyNoticesDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val notices = remember {
+        runCatching {
+            context.assets.open("licenses/THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() } +
+                "\n\n" + context.assets.open("licenses/APACHE-2.0.txt").bufferedReader().use { it.readText() }
+        }.getOrElse { "ライセンス本文を読み込めませんでした。" }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("サードパーティーライセンス") },
+        text = {
+            Text(
+                notices,
+                modifier = Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()),
+                style = MaterialTheme.typography.bodySmall
+            )
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } }
+    )
 }
 
 @Composable
@@ -310,8 +309,9 @@ fun UpdateStatusCard(
     updateInfo: UpdateChecker.UpdateInfo?,
     isChecking: Boolean,
     hasChecked: Boolean,
+    checkFailed: Boolean,
     onCheck: () -> Unit,
-    onUpdate: (String) -> Unit
+    onUpdate: (UpdateChecker.UpdateInfo) -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -319,6 +319,7 @@ fun UpdateStatusCard(
         colors = CardDefaults.elevatedCardColors(
             containerColor = when {
                 updateInfo?.isUpdateAvailable == true -> MaterialTheme.colorScheme.primaryContainer
+                checkFailed -> MaterialTheme.colorScheme.errorContainer
                 hasChecked && updateInfo != null -> MaterialTheme.colorScheme.secondaryContainer
                 else -> MaterialTheme.colorScheme.surfaceContainerHigh
             }
@@ -366,7 +367,7 @@ fun UpdateStatusCard(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = { onUpdate(updateInfo?.downloadUrl ?: UpdateChecker.UPDATE_PAGE_URL) },
+                    onClick = { updateInfo?.let(onUpdate) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
                     colors = ButtonDefaults.buttonColors(
@@ -394,21 +395,38 @@ fun UpdateStatusCard(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    if (hasChecked) Icons.Outlined.CheckCircle else Icons.Outlined.Refresh,
+                                    when {
+                                        checkFailed -> Icons.Outlined.ErrorOutline
+                                        hasChecked -> Icons.Outlined.CheckCircle
+                                        else -> Icons.Outlined.Refresh
+                                    },
                                     contentDescription = null,
-                                    tint = if (hasChecked) MaterialTheme.colorScheme.primary
-                                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = when {
+                                        checkFailed -> MaterialTheme.colorScheme.error
+                                        hasChecked -> MaterialTheme.colorScheme.primary
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
                         Column {
                             Text(
-                                if (hasChecked) "最新のバージョンです" else "アップデート確認",
+                                when {
+                                    checkFailed -> "更新情報を確認できません"
+                                    hasChecked -> "最新のバージョンです"
+                                    else -> "アップデート確認"
+                                },
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
-                            if (hasChecked) {
+                            if (checkFailed) {
+                                Text(
+                                    "リポジトリの公開後に再度お試しください",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            } else if (hasChecked) {
                                 Text(
                                     "最終確認: 今",
                                     style = MaterialTheme.typography.bodySmall,

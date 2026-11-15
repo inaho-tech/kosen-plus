@@ -599,31 +599,9 @@ fun NavGraph(startDestination: String = "splash") {
     }
 
     if (showUpdateDialog && updateInfo != null) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showUpdateDialog = false },
-            title = { androidx.compose.material3.Text("アップデートがあります") },
-            text = { 
-                androidx.compose.material3.Text(
-                    "新しいバージョン ${updateInfo?.latestVersion} が利用可能です。\n現在のバージョン: ${com.webclass.plus.util.UpdateChecker.CURRENT_VERSION}"
-                ) 
-            },
-            confirmButton = {
-                androidx.compose.material3.Button(
-                    onClick = {
-                        showUpdateDialog = false
-                        val targetUrl = updateInfo?.downloadUrl ?: com.webclass.plus.util.UpdateChecker.UPDATE_PAGE_URL
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl))
-                        context.startActivity(intent)
-                    }
-                ) {
-                    androidx.compose.material3.Text("アップデート")
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showUpdateDialog = false }) {
-                    androidx.compose.material3.Text("閉じる")
-                }
-            }
+        UpdateInstallDialog(
+            update = updateInfo!!,
+            onDismiss = { showUpdateDialog = false }
         )
     }
 

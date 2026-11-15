@@ -10,8 +10,7 @@ struct ToolsView: View {
         ToolDestination(id: "pomodoro", title: "ポモドーロタイマー", subtitle: "集中と休憩を管理", symbol: "timer"),
         ToolDestination(id: "stopwatch", title: "ストップウォッチ", subtitle: "ラップ対応", symbol: "stopwatch.fill"),
         ToolDestination(id: "todo", title: "ToDoリスト", subtitle: "タスクを端末に保存", symbol: "checklist"),
-        ToolDestination(id: "unit", title: "単位変換", subtitle: "長さ・質量などを換算", symbol: "arrow.left.arrow.right"),
-        ToolDestination(id: "kmap", title: "カルノー図", subtitle: "4変数までの論理式を整理", symbol: "square.grid.3x3.fill")
+        ToolDestination(id: "unit", title: "単位変換", subtitle: "長さ・質量などを換算", symbol: "arrow.left.arrow.right")
     ]
     private let gameTools = [
         ToolDestination(id: "airhockey", title: "エアホッケー", subtitle: "CPUと対戦するアクションゲーム", symbol: "circle.circle.fill"),
@@ -76,7 +75,6 @@ struct ToolRouter: View {
             case "stopwatch": StopwatchView()
             case "todo": TodoView()
             case "unit": UnitConverterView()
-            case "kmap": KarnaughView()
             default: ContentUnavailableView("利用できないツールです", systemImage: "exclamationmark.triangle")
             }
         }.navigationTitle(title).navigationBarTitleDisplayMode(.inline)
@@ -210,31 +208,4 @@ struct UnitConverterView: View {
         }
     }
 }
-
-struct KarnaughView: View {
-    @State private var cells = Array(repeating: false, count: 16)
-    private let gray = [0, 1, 3, 2]
-    var body: some View {
-        VStack(spacing: 18) {
-            Text("ABを行、CDを列とし、グレイコード順に配置します").font(.subheadline).foregroundStyle(.secondary)
-            Grid(horizontalSpacing: 4, verticalSpacing: 4) {
-                GridRow { Text("AB＼CD"); ForEach(gray, id: \.self) { Text(String($0, radix: 2).leftPadded(to: 2)) } }
-                ForEach(Array(gray.enumerated()), id: \.offset) { r, rv in
-                    GridRow {
-                        Text(String(rv, radix: 2).leftPadded(to: 2))
-                        ForEach(Array(gray.enumerated()), id: \.offset) { c, cv in
-                            let index = rv * 4 + cv
-                            Button(cells[index] ? "1" : "0") { cells[index].toggle() }
-                                .buttonStyle(.borderedProminent).tint(cells[index] ? .indigo : .gray)
-                        }
-                    }
-                }
-            }
-            Text("Σm(\(cells.indices.filter { cells[$0] }.map(String.init).joined(separator: ", ")))").font(.headline.monospaced())
-            Spacer()
-        }.padding()
-    }
-}
-
-private extension String { func leftPadded(to count: Int) -> String { String(repeating: "0", count: Swift.max(0, count-self.count)) + self } }
 

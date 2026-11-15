@@ -56,7 +56,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 enum class ToolsPage {
-    LIST, ATTENDANCE, LIBRARY_SEARCH, POMODORO, STOPWATCH, TODO, UNIT_CONVERTER, KARNAUGH_MAP, SILENT_CAMERA,
+    LIST, ATTENDANCE, LIBRARY_SEARCH, POMODORO, STOPWATCH, TODO, UNIT_CONVERTER, SILENT_CAMERA,
     OTHELLO, GOMOKU, NUMBER_MERGE, AIR_HOCKEY, MINE_SWEEPER, FLAPPY_SKY, REACTION_TEST
 }
 
@@ -152,7 +152,6 @@ fun ToolsScreen(
                                 ToolsPage.STOPWATCH -> "ストップウォッチ"
                                 ToolsPage.TODO -> "ToDoリスト"
                                 ToolsPage.UNIT_CONVERTER -> "単位換算"
-                                ToolsPage.KARNAUGH_MAP -> "カルノー図"
                                 ToolsPage.SILENT_CAMERA -> "無音カメラ"
                                 ToolsPage.OTHELLO -> "オセロ"
                                 ToolsPage.GOMOKU -> "五目並べ"
@@ -283,7 +282,6 @@ fun ToolsScreen(
                     )
                     ToolsPage.TODO -> TodoTab(useWallpaper = useWallpaper, isWideScreen = isWideScreen)
                     ToolsPage.UNIT_CONVERTER -> UnitConverterScreen(isWideScreen = isWideScreen)
-                    ToolsPage.KARNAUGH_MAP -> KarnaughMapScreen(isWideScreen = isWideScreen)
                     ToolsPage.SILENT_CAMERA -> SilentCameraScreen(isWideScreen = isWideScreen)
                     ToolsPage.OTHELLO -> OthelloScreen(
                         useWallpaper = useWallpaper,
@@ -436,15 +434,6 @@ private fun getToolItems(): List<ToolItem> {
             icon = Icons.Default.SwapHoriz,
             iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
             iconColor = MaterialTheme.colorScheme.tertiary,
-            genre = ToolGenre.STUDY
-        ),
-        ToolItem(
-            page = ToolsPage.KARNAUGH_MAP,
-            title = "カルノー図",
-            description = "2〜4変数のカルノー図を編集し、最小SOP・POS式とグループを確認します。",
-            icon = Icons.Default.GridView,
-            iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            iconColor = MaterialTheme.colorScheme.primary,
             genre = ToolGenre.STUDY
         ),
         ToolItem(
