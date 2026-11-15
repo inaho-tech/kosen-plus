@@ -15,6 +15,21 @@
   <a href="https://github.com/inaho-tech/kosen-plus/releases"><img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="120" alt="Get it on GitHub"></a>
 </p>
 
+## スクリーンショット
+
+<table>
+  <tr>
+    <td align="center"><img src="screen-shot/android/webclass.png" width="240" alt="WebClassのコース一覧"><br><sub>WebClass</sub></td>
+    <td align="center"><img src="screen-shot/android/syllabus.png" width="240" alt="シラバスの学科一覧"><br><sub>シラバス</sub></td>
+    <td align="center"><img src="screen-shot/android/bus.png" width="240" alt="小湊バスの時刻表"><br><sub>小湊バス</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screen-shot/android/train.png" width="240" alt="電車の時刻表"><br><sub>電車</sub></td>
+    <td align="center"><img src="screen-shot/android/tool.png" width="240" alt="学生向けツール一覧"><br><sub>ツール</sub></td>
+    <td align="center"><img src="screen-shot/android/user.png" width="240" alt="マイページ"><br><sub>マイページ</sub></td>
+  </tr>
+</table>
+
 ## Kosen+ について
 
 Kosen+ は、日々の授業で行き来する複数のサービスを一か所にまとめた、Android / iOS 向けアプリです。Webページを単に表示するだけでなく、コース、教材、成績、シラバスなどをモバイル向けの一覧として整理します。
