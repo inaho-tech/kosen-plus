@@ -2,10 +2,9 @@
   <img src="ios/PlusKosen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="88" alt="Kosen+ app icon">
 </p>
 <h1 align="center">Kosen+</h1>
-<p align="center"><strong>木更津工業高等専門学校（木更津高専）向け</strong></p>
 <p align="center">
   <strong>高専生活に必要な情報と道具を、ひとつのアプリに。</strong><br>
-  WebClass、シラバス、時刻表、学習ツールを見やすくまとめた学生向けクライアントです。
+  <strong>木更津高専</strong>向けに、WebClass、シラバス、時刻表、学習ツールを見やすくまとめた学生向けクライアントです。
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&amp;logoColor=white" alt="Android 8.0+">
@@ -13,7 +12,7 @@
   <img src="https://img.shields.io/badge/Kotlin-Compose-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin Compose">
 </p>
 <p align="center">
-  <a href="https://github.com/duckcat-chan/kosen-plus/releases"><img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="120" alt="Get it on GitHub"></a>
+  <a href="https://github.com/inaho-tech/kosen-plus/releases"><img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="120" alt="Get it on GitHub"></a>
 </p>
 
 ## Kosen+ について
