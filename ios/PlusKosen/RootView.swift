@@ -21,14 +21,17 @@ struct RootView: View {
             TabView(selection: $selection) {
                 ForEach(AppTab.allCases) { tab in
                     NavigationStack { tabContent(tab) }
-                        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 72) }
                         .toolbar(.hidden, for: .tabBar)
                         .tag(tab)
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear.frame(height: 78)
+            }
             PillNavigation(selection: $selection)
                 .padding(.horizontal, 14)
-                .padding(.bottom, 7)
+                .padding(.bottom, 6)
         }
         .tint(.indigo)
     }
@@ -49,20 +52,20 @@ private struct PillNavigation: View {
     @Namespace private var selectionAnimation
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             ForEach(RootView.AppTab.allCases) { tab in
                 Button {
                     withAnimation(.snappy(duration: 0.32)) { selection = tab }
                 } label: {
                     VStack(spacing: 3) {
-                        Image(systemName: tab.symbol).font(.system(size: 18, weight: .semibold))
-                        Text(tab.title).font(.system(size: 10, weight: .semibold)).lineLimit(1)
+                        Image(systemName: tab.symbol).font(.system(size: 17, weight: .medium))
+                        Text(tab.title).font(.system(size: 10, weight: .medium)).lineLimit(1)
                     }
                     .foregroundStyle(selection == tab ? Color.indigo : Color.secondary)
                     .frame(maxWidth: .infinity, minHeight: 52)
                     .background {
                         if selection == tab {
-                            Capsule().fill(.indigo.opacity(0.14)).matchedGeometryEffect(id: "selection", in: selectionAnimation)
+                            Capsule().fill(.primary.opacity(0.07)).matchedGeometryEffect(id: "selection", in: selectionAnimation)
                         }
                     }
                     .contentShape(Rectangle())
@@ -72,7 +75,7 @@ private struct PillNavigation: View {
         .padding(6)
         .frame(maxWidth: 620)
         .liquidGlassPill()
-        .shadow(color: .black.opacity(0.13), radius: 18, y: 8)
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 5)
     }
 }
 
@@ -243,27 +246,26 @@ private struct CourseCard: View {
     let bookmarked: Bool
     private var appearance: CourseAppearance { .course(course.title) }
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             Image(systemName: appearance.symbol)
-                .font(.title3).foregroundStyle(appearance.color)
-                .frame(width: 46, height: 46)
-                .background(appearance.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
-            VStack(alignment: .leading, spacing: 5) {
+                .font(.system(size: 18, weight: .medium)).foregroundStyle(.indigo)
+                .frame(width: 38, height: 38)
+                .background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 11))
+            VStack(alignment: .leading, spacing: 3) {
                 Text(course.title).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading)
                 if !course.code.isEmpty { Text(course.code).font(.caption).foregroundStyle(.secondary) }
             }
             Spacer()
-            if course.isDueSoon {
-                Image(systemName: "exclamationmark.clock.fill").foregroundStyle(.orange)
-            }
-            if bookmarked { Image(systemName: "bookmark.fill").foregroundStyle(.indigo) }
             if course.unreadCount > 0 {
-                Text("\(course.unreadCount)").font(.caption.bold()).foregroundStyle(.white)
-                    .padding(.horizontal, 7).padding(.vertical, 3).background(.red, in: Capsule())
+                Text("\(course.unreadCount)").font(.caption.weight(.semibold)).foregroundStyle(.indigo)
+                    .padding(.horizontal, 7).padding(.vertical, 3).background(.indigo.opacity(0.1), in: Capsule())
+            } else if course.isDueSoon {
+                Image(systemName: "clock.badge.exclamationmark").foregroundStyle(.secondary)
+            } else if bookmarked {
+                Image(systemName: "bookmark.fill").foregroundStyle(.secondary)
             }
-            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
         }
-        .padding(15).appCard()
+        .padding(13).appCard(cornerRadius: 15)
     }
 }
 

@@ -12,12 +12,10 @@ struct AppSectionHeader: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            if let symbol { Image(systemName: symbol).foregroundStyle(AppPalette.accent) }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.title3.bold())
-                if let subtitle { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
-            }
+            if let symbol { Image(systemName: symbol).font(.subheadline).foregroundStyle(.secondary) }
+            Text(title).font(.headline.weight(.semibold))
             Spacer()
+            if let subtitle { Text(subtitle).font(.caption).foregroundStyle(.tertiary) }
         }
         .accessibilityAddTraits(.isHeader)
     }
@@ -29,10 +27,10 @@ struct AppIconTile: View {
 
     var body: some View {
         Image(systemName: symbol)
-            .font(.system(size: size * 0.42, weight: .semibold))
-            .foregroundStyle(color)
+            .font(.system(size: size * 0.4, weight: .medium))
+            .foregroundStyle(AppPalette.accent)
             .frame(width: size, height: size)
-            .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+            .background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
     }
 }
 
@@ -66,27 +64,18 @@ extension View {
 private struct LiquidGlassCardModifier: ViewModifier {
     let cornerRadius: CGFloat
 
-    @ViewBuilder
     func body(content: Content) -> some View {
-#if compiler(>=6.2)
-        if #available(iOS 26.0, *) {
-            content.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
-        } else {
-            fallback(content)
-        }
-#else
         fallback(content)
-#endif
     }
 
     private func fallback(_ content: Content) -> some View {
         content
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(AppPalette.card, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(LinearGradient(colors: [.white.opacity(0.38), .white.opacity(0.06), .primary.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8)
+                    .stroke(.primary.opacity(0.055), lineWidth: 0.75)
             }
-            .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
+            .shadow(color: .black.opacity(0.025), radius: 5, y: 2)
     }
 }
 

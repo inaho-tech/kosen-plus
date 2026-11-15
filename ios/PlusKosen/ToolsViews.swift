@@ -25,12 +25,12 @@ struct ToolsView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 14) {
-                AppSectionHeader(title: "学校サービス", subtitle: "撮影・出席・図書館", symbol: "building.columns.fill")
+            LazyVStack(alignment: .leading, spacing: 12) {
+                AppSectionHeader(title: "学校サービス", symbol: "building.columns")
                 toolGrid(schoolTools)
-                AppSectionHeader(title: "学習ツール", subtitle: "集中・記録・計算", symbol: "hammer.fill").padding(.top, 6)
+                AppSectionHeader(title: "学習ツール", symbol: "hammer").padding(.top, 6)
                 toolGrid(studyTools)
-                AppSectionHeader(title: "ゲーム", subtitle: "休憩・気分転換", symbol: "gamecontroller.fill").padding(.top, 6)
+                AppSectionHeader(title: "ゲーム", symbol: "gamecontroller").padding(.top, 6)
                 toolGrid(gameTools)
             }.padding().appReadableContentWidth()
         }
@@ -40,31 +40,17 @@ struct ToolsView: View {
     }
 
     private func toolGrid(_ values: [ToolDestination]) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 12)], spacing: 12) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
             ForEach(values) { tool in
                 NavigationLink(value: tool) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        AppIconTile(symbol: tool.symbol, color: toolColor(tool.id), size: 44)
-                        Text(tool.title).font(.headline).foregroundStyle(.primary).lineLimit(1)
-                        Text(tool.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                    }.frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
-                        .padding(14).appCard(cornerRadius: 16)
+                    HStack(spacing: 11) {
+                        AppIconTile(symbol: tool.symbol, color: .indigo, size: 38)
+                        Text(tool.title).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(2)
+                        Spacer(minLength: 0)
+                    }.frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+                        .padding(11).appCard(cornerRadius: 14)
                 }.buttonStyle(.plain)
             }
-        }
-    }
-
-    private func toolColor(_ id: String) -> Color {
-        switch id {
-        case "camera": .blue
-        case "attendance": .green
-        case "library": .brown
-        case "reaction", "flappy": .orange
-        case "othello", "gomoku", "merge", "mines", "airhockey": .pink
-        case "kmap", "unit": .purple
-        case "pomodoro", "stopwatch": .red
-        case "todo": .teal
-        default: .indigo
         }
     }
 }

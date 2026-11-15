@@ -12,7 +12,7 @@ struct SettingsView: View {
             Section {
                 VStack(spacing: 11) {
                     Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 66)).foregroundStyle(.indigo)
+                        .font(.system(size: 52)).foregroundStyle(.indigo)
                         .symbolRenderingMode(.hierarchical)
                     Text(webClass.userName.isEmpty ? "WebClass ユーザー" : webClass.userName).font(.title2.bold()).lineLimit(1)
                     if !webClass.email.isEmpty {
@@ -20,11 +20,7 @@ struct SettingsView: View {
                     }
                     Label(webClass.loginState == .signedIn ? "ログイン中" : webClass.loginState == .checking ? "セッションを確認中" : "未ログイン", systemImage: webClass.loginState == .signedIn ? "checkmark.circle.fill" : "person.crop.circle.badge.exclamationmark")
                         .font(.subheadline).foregroundStyle(webClass.loginState == .signedIn ? Color.green : Color.secondary)
-                    HStack(spacing: 18) {
-                        Label("v4.5.2", systemImage: "number")
-                        Label(webClass.loginState == .signedIn ? "セッション有効" : "未接続", systemImage: "checkmark.shield")
-                    }.font(.caption).foregroundStyle(.secondary)
-                }.padding(.vertical, 18).frame(maxWidth: .infinity)
+                }.padding(.vertical, 12).frame(maxWidth: .infinity)
             }
 
             Section("アカウント") {
@@ -47,7 +43,7 @@ struct SettingsView: View {
                     Button("ライト") { settings.appearance = "light" }
                     Button("ダーク") { settings.appearance = "dark" }
                 } label: {
-                    IOSSettingsRow(symbol: "circle.lefthalf.filled", color: .indigo, title: "アプリのテーマ", subtitle: themeLabel, trailingValue: themeLabel)
+                    IOSSettingsRow(symbol: "circle.lefthalf.filled", color: .indigo, title: "アプリのテーマ", subtitle: "", trailingValue: themeLabel)
                 }.foregroundStyle(.primary)
             }
 
@@ -111,9 +107,12 @@ private struct IOSSettingsRow: View {
     var trailingValue: String? = nil
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: symbol).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
-                .frame(width: 32, height: 32).background(color.gradient, in: RoundedRectangle(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 2) { Text(title).font(.body); Text(subtitle).font(.caption).foregroundStyle(.secondary) }
+            Image(systemName: symbol).font(.system(size: 17, weight: .medium)).foregroundStyle(.indigo)
+                .frame(width: 28, height: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.body)
+                if !subtitle.isEmpty { Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+            }
             Spacer()
             if let trailingValue { Text(trailingValue).font(.subheadline).foregroundStyle(.secondary) }
         }.padding(.vertical, 3).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())

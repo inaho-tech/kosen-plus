@@ -754,15 +754,15 @@ private struct ContentRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: appearance.symbol)
-                .foregroundStyle(appearance.color)
+                .foregroundStyle(.indigo)
                 .frame(width: 38, height: 38)
-                .background(appearance.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
+                .background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 11))
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
                 HStack(spacing: 6) {
                     if !item.category.isEmpty { Text(item.category).foregroundStyle(.secondary) }
-                    if item.isNew { Text("NEW").foregroundStyle(.red) }
-                    if item.isUnread { Text("未実施").foregroundStyle(.orange) }
+                    if item.isNew { Text("NEW").foregroundStyle(.indigo) }
+                    if item.isUnread { Text("未実施").foregroundStyle(.secondary) }
                 }.font(.caption.weight(.semibold))
             }
         }.padding(.vertical, 3)
@@ -803,7 +803,6 @@ struct SyllabusView: View {
                                             AppIconTile(symbol: appearance.symbol, color: appearance.color)
                                             Text(department.name).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
                                             Spacer()
-                                            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
                                         }.padding(13).frame(height: 74).appCard()
                                     }.buttonStyle(.plain)
                                 }
@@ -1099,7 +1098,7 @@ private struct SyllabusSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             AppSectionHeader(title: title, symbol: symbol)
             content
-        }.padding(15).appCard(cornerRadius: 17).overlay(alignment: .leading) { Rectangle().fill(color).frame(width: 4) }.clipShape(RoundedRectangle(cornerRadius: 17))
+        }.padding(15).appCard(cornerRadius: 17).overlay(alignment: .leading) { Rectangle().fill(AppPalette.accent.opacity(0.55)).frame(width: 3) }.clipShape(RoundedRectangle(cornerRadius: 17))
     }
 }
 
@@ -1213,7 +1212,7 @@ private struct SyllabusHeroCard: View {
                     if !subject.targetYear.isEmpty { Text(subject.targetYear) }
                     if !subject.requirement.isEmpty { Text(subject.requirement) }
                     if !subject.category.isEmpty { Text(subject.category) }
-                }.font(.caption2.weight(.semibold)).foregroundStyle(appearance.color)
+                }.font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
             }
         }.padding(16).frame(maxWidth: .infinity, alignment: .leading).appCard(cornerRadius: 18)
     }
@@ -1235,18 +1234,16 @@ private struct SubjectRow: View {
     private var appearance: CourseAppearance { .course(subject.name) }
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: appearance.symbol).foregroundStyle(appearance.color)
-                .frame(width: 42, height: 42).background(appearance.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-            VStack(alignment: .leading, spacing: 5) {
+            Image(systemName: appearance.symbol).foregroundStyle(.indigo)
+                .frame(width: 38, height: 38).background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 11))
+            VStack(alignment: .leading, spacing: 4) {
                 Text(subject.name).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
-                if !subject.detail.isEmpty { Text(subject.detail).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
                 HStack(spacing: 6) {
                     if !subject.requirement.isEmpty { Text(subject.requirement) }
                     if !subject.targetYear.isEmpty { Text(subject.targetYear) }
-                }.font(.caption2.weight(.semibold)).foregroundStyle(.indigo)
+                }.font(.caption2.weight(.medium)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
-            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.tertiary)
         }.padding(.vertical, 4)
     }
 }

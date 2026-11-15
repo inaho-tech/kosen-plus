@@ -1,87 +1,125 @@
-# WebClass Plus Android
+<div align="center">
+  <img src="ios/PlusKosen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="132" alt="Kosen+ app icon">
 
-A native Android app that wraps **WebClass LMS** with a modern, Material Design 3 UI and enhanced features for students.
+  # Kosen+
 
-## Features
+  **高専生活に必要な情報と道具を、ひとつのアプリに。**
 
-- ✅ **Modern Native UI**
-    - Built with Jetpack Compose and Material Design 3.
-    - Three Theme Variants: Light, Dark, Pastel + Dynamic Color support.
-    - Supports Tablet layouts with responsive navigation (Sidebar/Bottom Bar).
-    - Custom Color Theme Editor.
-- ✅ **Enhanced Video Player** (v2.2.0)
-    - **Native Playback**: Automatically detects and plays embedded videos using ExoPlayer.
-    - **Immersive Mode**: Hides system bars and app navigation for distraction-free viewing.
-    - **Full Localization**: Japanese UI for controls and settings.
-    - **Background Playback**: Audio continues even when screen is off (optional).
-- ✅ **Advanced Navigation**
-    - Seamless tab navigation (Home, Bookmarks, User, Settings).
-    - "Sticky" Home tab focus when browsing deep course content.
-    - Safe-area aware design (supports camera cutouts/notches).
-- ✅ **Course Management**
-    - Filter courses by Year/Semester.
-    - View course contents, details, and history.
-    - Bookmark favorite courses.
-- ✅ **Focus Mode**
-    - Hides system bars to help you concentrate on materials.
+  WebClass、シラバス、時刻表、学習ツールを、見やすく素早く使える学生向けクライアントです。
 
-## Version History
+  ![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)
+  ![iOS](https://img.shields.io/badge/iOS-SwiftUI-000000?logo=apple&logoColor=white)
+  ![Kotlin](https://img.shields.io/badge/Kotlin-Compose-7F52FF?logo=kotlin&logoColor=white)
+  ![Status](https://img.shields.io/badge/status-development-5865F2)
+</div>
 
-### v3.7.0 (Latest)
-- **Browser Bug Fixes, New Start Animation & Optimizations**:
-    - **In-App Browser Split-Screen Fixes**: Locked currently running textbooks/contents to the primary pane when split screen is enabled. Created an advanced selection highlight and redirection system to target the split/auxiliary pane automatically.
-    - **New Elegant Brand Splash Screen**: Replaced startup icons with standard theme-adaptive Material vectors, providing beautiful staggered cubic and overshoot scaling animations.
-    - **App-Wide Optimization & Lightweighting**: Integrated JavaScript extraction on the home screen into a single execution, resolved preferences flow cascading recompositions via `.distinctUntilChanged()`, and added stable list recycling keys for list performance.
+---
 
-### v3.6.1
-- **Developer Name Update**:
-    - Updated developer name representation to "稲穂".
-    - Cleaned up mock data references to old user handle.
+## Kosen+ について
 
-### v3.6.0
-- **Portfolio & Report Features**:
-    - Added Portfolio feature for unified management of study outcomes and records.
-    - Added My Reports feature for convenient submission and report management.
-    - Added Split View (Multi-Window) for in-app browser.
-    - Added Grade Filter for syllabus search.
-    - Added Index/Header navigation for syllabus details.
-    - Optimized Tablet layouts for Grades page.
-    - Revamped Home widgets layout and design.
-    - Animation and UI bug fixes.
+Kosen+ は、日々の授業で行き来する複数のサービスを一か所にまとめた、Android / iOS 向けアプリです。Webページを単に表示するだけでなく、コース、教材、成績、シラバスなどをモバイル向けの一覧として整理します。
 
-### v2.2.1
-- **Maintenance**:
-    - Updated Open Source License information.
+授業前に時刻表を確認する、教材を開く、提出状況を見る、空き時間に学習ツールを使う——その一連の操作を、アプリ内で自然につなげることを目指しています。
 
-### v2.2.0
-- **Native Video Player**:
-    - Replaced WebView playback with a custom ExoPlayer implementation.
-    - Added full-screen immersive mode.
-    - Added Japanese localization for all player controls.
-    - Added toggle setting to enable/disable native player.
-- **Tablet Optimizations**:
-    - Fixed orientation issues on tablets (no longer forces landscape).
-    - Adjusted sidebar layout to avoid camera cutouts.
-- **Navigation**:
-    - Improved navigation focus (Home tab stays active).
-    - Added exit confirmation dialog when pressing Back during content execution.
+## 主な機能
 
-### v2.1.0 & v2.0.0
-- Tablet UI Support with Adaptive Navigation Rail.
-- Custom Theme Editor implementation.
-- Focus Mode.
-- Initial release of feature-complete app.
+### WebClassを見やすく
 
-## Build & Run
+- 年度・学期・曜日で整理されたコース一覧
+- コース検索、お気に入り、課題の絞り込み
+- 教材の詳細、利用履歴、結果履歴
+- 成績とレポートの確認
+- WebClassのログイン状態とCookieを利用したセッション復帰
+- PDF・動画・音声などの教材をアプリ内で表示
 
-1. Open in Android Studio Giraffe or newer.
-2. Sync Gradle.
-3. Run on emulator or device (minSdk 26, targetSdk 35).
+### シラバスをすばやく検索
 
-## Tech Stack
+- 学科、学年、科目名による検索と絞り込み
+- 科目に応じて変わるアイコン
+- 授業概要、到達目標、評価方法、授業計画を読みやすく表示
+- iPhone、iPad、Androidタブレットに合わせたレスポンシブ表示
 
-- **Language**: Kotlin
-- **UI**: Jetpack Compose + Material3
-- **Media**: Media3 (ExoPlayer)
-- **Architecture**: MVVM
-- **Data**: DataStore, Gson
+### 通学の時刻表をひとつに
+
+- 小湊バスと電車の時刻表
+- 次の便が分かる現在時刻ベースの表示
+- 電車駅の検索と複数のお気に入り
+- 上り・下りの切り替え
+- 運行情報の確認
+
+### 学校生活に役立つツール
+
+- 無音カメラとアプリ内ギャラリー
+- 電子出席簿、図書館蔵書検索
+- ポモドーロタイマー、ストップウォッチ、ToDo、単位変換
+- カルノー図
+- 反射神経テスト、オセロ、五目並べなどのミニゲーム
+
+## デザイン
+
+Android版は Jetpack Compose / Material 3、iOS版は SwiftUI を採用しています。各OSの操作感を尊重しながら、情報の優先順位、コースの分類、検索・フィルター、タブレット向けレイアウトを共通化しています。
+
+- ライト / ダークテーマ
+- 画面幅に応じたグリッドと一覧
+- セーフエリアを考慮したナビゲーション
+- iOSでのスワイプによるタブ移動
+- 動きを抑える設定とフォーカスモード
+
+## プロジェクト構成
+
+```text
+.
+├── app/                 Androidアプリ（Kotlin / Jetpack Compose）
+├── ios/                 iOSアプリ（Swift / SwiftUI）
+├── .github/workflows/   iOSのビルドとIPA生成
+└── gradle/              Androidビルド設定
+```
+
+## ビルド
+
+### Android
+
+必要なもの:
+
+- Android Studio
+- JDK 17
+- Android SDK 35
+
+```powershell
+.\gradlew.bat assembleDebug
+```
+
+生成されたAPKは `app/build/outputs/apk/debug/` にあります。
+
+### iOS
+
+必要なもの:
+
+- macOS / Xcode
+- XcodeGen
+
+```bash
+cd ios
+xcodegen generate
+open PlusKosen.xcodeproj
+```
+
+GitHub Actions の **Build iOS IPA** から、署名前のIPAとSimulatorプレビューも生成できます。端末へ導入する場合は、利用者自身の証明書とプロビジョニングプロファイルで署名してください。詳しくは [iOS向けREADME](ios/README.md) を参照してください。
+
+## 使用しているサービス
+
+Kosen+ は、次のサービスから利用者が閲覧できる情報を取得・表示します。
+
+- [WebClass](https://webclass.kosen-k.go.jp/webclass/)
+- [高専Webシラバス](https://syllabus.kosen-k.go.jp/)
+- [どこトレ](https://doko-train.jp/sp/)（アプリ内表記: 電車）
+
+## 注意事項
+
+このプロジェクトは各サービスの公式アプリではありません。各サービスの利用規約、学校の規則、公開範囲に従って利用してください。サービス側の仕様変更により、一部機能が利用できなくなる場合があります。
+
+認証は各サービスのWeb画面を通して行い、MicrosoftアカウントのパスワードをKosen+独自の保存領域へ記録することはありません。
+
+## 開発状況
+
+Android版とiOS版は継続して機能とUIを調整しています。不具合や改善案は、このリポジトリのIssuesから共有してください。
