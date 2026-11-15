@@ -9,13 +9,12 @@ struct WebClassView: View {
     var onNavigation: ((URL) -> Void)? = nil
     @EnvironmentObject private var settings: AppSettings
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("customWebClassUI") private var customWebClassUI = false
     @State private var progress = 0.0
     @State private var title = ""
     @State private var showExitConfirmation = false
 
     var body: some View {
-        WebContainer(url: startURL, preferMobileCourseUI: customWebClassUI, progress: $progress, pageTitle: $title, onNavigation: onNavigation)
+        WebContainer(url: startURL, progress: $progress, pageTitle: $title, onNavigation: onNavigation)
             .background(Color(.systemBackground))
             .navigationTitle(title.isEmpty ? "WebClass" : title)
             .navigationBarTitleDisplayMode(.inline)
@@ -40,7 +39,6 @@ struct WebClassView: View {
 
 struct WebContainer: UIViewRepresentable {
     let url: URL
-    let preferMobileCourseUI: Bool
     @Binding var progress: Double
     @Binding var pageTitle: String
     var onNavigation: ((URL) -> Void)? = nil
@@ -95,26 +93,7 @@ struct WebContainer: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            guard parent.preferMobileCourseUI, let source = navigationAction.request.url,
-                  source.host == "webclass.kosen-k.go.jp", var parts = URLComponents(url: source, resolvingAgainstBaseURL: false) else {
-                decisionHandler(.allow); return
-            }
-            if parts.path.hasSuffix("/qstn_frame.php") {
-                parts.path = "/webclass/mbl.php/questions/"
-                var query = parts.queryItems ?? []
-                if !query.contains(where: { $0.name == "mbl" }) { query.append(URLQueryItem(name: "mbl", value: "1")) }
-                parts.queryItems = query
-            } else if parts.path.hasSuffix("/show_frame.php") {
-                parts.path = "/webclass/show_info.php"
-                var query = parts.queryItems ?? []
-                if !query.contains(where: { $0.name == "mbl" }) { query.append(URLQueryItem(name: "mbl", value: "1")) }
-                parts.queryItems = query
-            } else {
-                decisionHandler(.allow); return
-            }
-            guard let mobile = parts.url, mobile != source else { decisionHandler(.allow); return }
-            webView.load(URLRequest(url: mobile))
-            decisionHandler(.cancel)
+            decisionHandler(.allow)
         }
 
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {

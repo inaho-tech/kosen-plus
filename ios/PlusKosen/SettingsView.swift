@@ -61,10 +61,7 @@ struct SettingsView: View {
 
             Section("一般") {
                 NavigationLink { AppInfoView() } label: {
-                    IOSSettingsRow(symbol: "info.circle.fill", color: .blue, title: "情報・ライセンス", subtitle: "取得元・バージョン・OSS")
-                }
-                NavigationLink { DeveloperSettingsView() } label: {
-                    IOSSettingsRow(symbol: "hammer.fill", color: .orange, title: "開発者向け設定", subtitle: "試験的な機能と詳細設定")
+                    IOSSettingsRow(symbol: "info.circle.fill", color: .blue, title: "情報", subtitle: "取得元とバージョン")
                 }
             }
         }
@@ -128,19 +125,7 @@ struct AppInfoView: View {
                 Link("高専Webシラバス", destination: URL(string: "https://syllabus.kosen-k.go.jp/")!)
                 Link("どこトレ（アプリ内名称：電車）", destination: URL(string: "https://doko-train.jp/sp/")!)
             }
-        }.navigationTitle("情報・ライセンス")
-    }
-}
-
-struct DeveloperSettingsView: View {
-    @AppStorage("customWebClassUI") private var customWebClassUI = false
-    var body: some View {
-        Form {
-            Section("危険なエリア") {
-                Toggle("教材に独自UIを反映", isOn: $customWebClassUI)
-                Text("WebClassの内部仕様変更により教材を正しく表示できなくなる場合があります。").font(.caption).foregroundStyle(.secondary)
-            }
-        }.navigationTitle("開発者向け設定")
+        }.navigationTitle("情報")
     }
 }
 

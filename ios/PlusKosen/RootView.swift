@@ -17,21 +17,21 @@ struct RootView: View {
     @State private var selection = AppTab.home
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selection) {
-                ForEach(AppTab.allCases) { tab in
-                    NavigationStack { tabContent(tab) }
-                        .safeAreaPadding(.bottom, 78)
-                        .toolbar(.hidden, for: .tabBar)
-                        .tag(tab)
-                }
+        TabView(selection: $selection) {
+            ForEach(AppTab.allCases) { tab in
+                NavigationStack { tabContent(tab) }
+                    .toolbar(.hidden, for: .tabBar)
+                    .tag(tab)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .background(.clear)
-            .ignoresSafeArea(.container, edges: .bottom)
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .background(.clear)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             PillNavigation(selection: $selection)
                 .padding(.horizontal, 14)
-                .padding(.bottom, 6)
+                .padding(.top, 4)
+                .padding(.bottom, 5)
+                .background(Color.clear)
         }
         .tint(.indigo)
     }
@@ -57,6 +57,7 @@ private struct PillNavigation: View {
             let slotWidth = geometry.size.width / CGFloat(tabs.count)
             let selectedIndex = CGFloat(tabs.firstIndex(of: selection) ?? 0)
             let indicatorCenter = dragLocation ?? ((selectedIndex + 0.5) * slotWidth)
+            let activeIndex = dragLocation.map { min(max(Int($0 / slotWidth), 0), tabs.count - 1) } ?? Int(selectedIndex)
 
             ZStack(alignment: .leading) {
                 Capsule().fill(.clear).liquidGlassPill()
@@ -67,38 +68,42 @@ private struct PillNavigation: View {
                     .liquidGlassSelection()
                     .allowsHitTesting(false)
                 HStack(spacing: 0) {
-                    ForEach(tabs) { tab in
-                        Button {
-                            withAnimation(.snappy(duration: 0.32)) { selection = tab }
-                        } label: {
-                            VStack(spacing: 3) {
-                                Image(systemName: tab.symbol).font(.system(size: 17, weight: .medium))
-                                Text(tab.title).font(.system(size: 10, weight: .medium)).lineLimit(1)
-                            }
-                            .foregroundStyle(selection == tab ? Color.indigo : Color.secondary)
-                            .frame(maxWidth: .infinity, minHeight: 52)
-                            .contentShape(Rectangle())
-                        }.buttonStyle(.plain)
+                    ForEach(Array(tabs.enumerated()), id: \.element) { index, tab in
+                        VStack(spacing: 3) {
+                            Image(systemName: tab.symbol).font(.system(size: 17, weight: .medium))
+                            Text(tab.title).font(.system(size: 10, weight: .medium)).lineLimit(1)
+                        }
+                        .foregroundStyle(activeIndex == index ? Color.indigo : Color.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .contentShape(Rectangle())
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(tab.title)
+                        .accessibilityAddTraits(activeIndex == index ? [.isButton, .isSelected] : .isButton)
+                        .accessibilityAction { withAnimation(.snappy(duration: 0.3)) { selection = tab } }
                     }
                 }.padding(6)
             }
             .contentShape(Capsule())
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 6, coordinateSpace: .local)
+            .gesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .local)
                     .onChanged { value in
                         let x = min(max(value.location.x, slotWidth / 2), geometry.size.width - slotWidth / 2)
                         dragLocation = x
-                        let index = min(max(Int(x / slotWidth), 0), tabs.count - 1)
-                        if tabs[index] != selection { selection = tabs[index] }
                     }
-                    .onEnded { _ in
-                        withAnimation(.snappy(duration: 0.3)) { dragLocation = nil }
+                    .onEnded { value in
+                        let x = min(max(value.location.x, slotWidth / 2), geometry.size.width - slotWidth / 2)
+                        let index = min(max(Int(x / slotWidth), 0), tabs.count - 1)
+                        withAnimation(.snappy(duration: 0.3)) {
+                            selection = tabs[index]
+                            dragLocation = nil
+                        }
                     }
             )
         }
         .frame(maxWidth: 620)
         .frame(height: 64)
         .shadow(color: .black.opacity(0.08), radius: 12, y: 5)
+        .onChange(of: selection) { dragLocation = nil }
     }
 }
 
