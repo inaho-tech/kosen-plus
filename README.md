@@ -14,7 +14,9 @@
 
   <br><br>
 
-  [![](https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png)](https://github.com/duckcat-chan/kosen-plus/releases)
+  <a href="https://github.com/duckcat-chan/kosen-plus/releases">
+    <img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="150" alt="Get it on GitHub">
+  </a>
 </div>
 
 ---
