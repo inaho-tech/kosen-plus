@@ -10,7 +10,7 @@ struct RootView: View {
     fileprivate enum AppTab: Int, CaseIterable, Identifiable {
         case home, syllabus, timetable, tools, profile
         var id: Self { self }
-        var title: String { switch self { case .home: "ホーム"; case .syllabus: "シラバス"; case .timetable: "時刻表"; case .tools: "ツール"; case .profile: "マイページ" } }
+        var title: String { switch self { case .home: "WebClass"; case .syllabus: "シラバス"; case .timetable: "時刻表"; case .tools: "ツール"; case .profile: "マイページ" } }
         var symbol: String { switch self { case .home: "graduationcap.fill"; case .syllabus: "doc.text.fill"; case .timetable: "clock.fill"; case .tools: "hammer.fill"; case .profile: "person.crop.circle.fill" } }
     }
 
@@ -21,14 +21,14 @@ struct RootView: View {
             TabView(selection: $selection) {
                 ForEach(AppTab.allCases) { tab in
                     NavigationStack { tabContent(tab) }
+                        .safeAreaPadding(.bottom, 78)
                         .toolbar(.hidden, for: .tabBar)
                         .tag(tab)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear.frame(height: 78)
-            }
+            .background(.clear)
+            .ignoresSafeArea(.container, edges: .bottom)
             PillNavigation(selection: $selection)
                 .padding(.horizontal, 14)
                 .padding(.bottom, 6)
@@ -49,32 +49,55 @@ struct RootView: View {
 
 private struct PillNavigation: View {
     @Binding var selection: RootView.AppTab
-    @Namespace private var selectionAnimation
+    @State private var dragLocation: CGFloat?
 
     var body: some View {
-        HStack(spacing: 2) {
-            ForEach(RootView.AppTab.allCases) { tab in
-                Button {
-                    withAnimation(.snappy(duration: 0.32)) { selection = tab }
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: tab.symbol).font(.system(size: 17, weight: .medium))
-                        Text(tab.title).font(.system(size: 10, weight: .medium)).lineLimit(1)
+        GeometryReader { geometry in
+            let tabs = RootView.AppTab.allCases
+            let slotWidth = geometry.size.width / CGFloat(tabs.count)
+            let selectedIndex = CGFloat(tabs.firstIndex(of: selection) ?? 0)
+            let indicatorCenter = dragLocation ?? ((selectedIndex + 0.5) * slotWidth)
+
+            ZStack(alignment: .leading) {
+                Capsule().fill(.clear).liquidGlassPill()
+                Capsule()
+                    .fill(.primary.opacity(0.045))
+                    .frame(width: max(44, slotWidth - 8), height: 52)
+                    .offset(x: min(max(4, indicatorCenter - slotWidth / 2 + 4), geometry.size.width - slotWidth + 4))
+                    .liquidGlassSelection()
+                    .allowsHitTesting(false)
+                HStack(spacing: 0) {
+                    ForEach(tabs) { tab in
+                        Button {
+                            withAnimation(.snappy(duration: 0.32)) { selection = tab }
+                        } label: {
+                            VStack(spacing: 3) {
+                                Image(systemName: tab.symbol).font(.system(size: 17, weight: .medium))
+                                Text(tab.title).font(.system(size: 10, weight: .medium)).lineLimit(1)
+                            }
+                            .foregroundStyle(selection == tab ? Color.indigo : Color.secondary)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .contentShape(Rectangle())
+                        }.buttonStyle(.plain)
                     }
-                    .foregroundStyle(selection == tab ? Color.indigo : Color.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background {
-                        if selection == tab {
-                            Capsule().fill(.primary.opacity(0.07)).matchedGeometryEffect(id: "selection", in: selectionAnimation)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.padding(6)
             }
+            .contentShape(Capsule())
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 6, coordinateSpace: .local)
+                    .onChanged { value in
+                        let x = min(max(value.location.x, slotWidth / 2), geometry.size.width - slotWidth / 2)
+                        dragLocation = x
+                        let index = min(max(Int(x / slotWidth), 0), tabs.count - 1)
+                        if tabs[index] != selection { selection = tabs[index] }
+                    }
+                    .onEnded { _ in
+                        withAnimation(.snappy(duration: 0.3)) { dragLocation = nil }
+                    }
+            )
         }
-        .padding(6)
         .frame(maxWidth: 620)
-        .liquidGlassPill()
+        .frame(height: 64)
         .shadow(color: .black.opacity(0.08), radius: 12, y: 5)
     }
 }
@@ -127,7 +150,8 @@ struct HomeView: View {
             if session.loginState == .signedOut && session.courses.isEmpty { signedOutView }
             else { courseList }
         }
-        .navigationTitle("WebClass+")
+        .navigationTitle("WebClass")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 NavigationLink { WebClassView(startURL: WebClassSession.messagesURL) } label: { Image(systemName: "envelope") }

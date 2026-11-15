@@ -759,6 +759,7 @@ private struct ContentRow: View {
                 .background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 11))
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
+                    .frame(minHeight: 40, alignment: .topLeading)
                 HStack(spacing: 6) {
                     if !item.category.isEmpty { Text(item.category).foregroundStyle(.secondary) }
                     if item.isNew { Text("NEW").foregroundStyle(.indigo) }
@@ -812,7 +813,7 @@ struct SyllabusView: View {
                     .padding(16)
                 }.refreshable { loader.reload() }.appScreenBackground()
             }
-        }.navigationTitle("シラバス")
+        }.navigationTitle("シラバス").navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -876,11 +877,11 @@ struct SyllabusSubjectsView: View {
                         }
                         ForEach(grouped) { group in
                             AppSectionHeader(title: group.category, subtitle: "\(group.subjects.count)件")
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 330), spacing: 12)], spacing: 12) {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 10)], spacing: 10) {
                                 ForEach(group.subjects) { subject in
                                     if let url = subject.url {
-                                        NavigationLink { SyllabusDetailView(subject: subject, url: url) } label: { SubjectRow(subject: subject).padding(14).frame(minHeight: 98).appCard(cornerRadius: 16) }.buttonStyle(.plain)
-                                    } else { SubjectRow(subject: subject).padding(14).frame(minHeight: 98).appCard(cornerRadius: 16) }
+                                        NavigationLink { SyllabusDetailView(subject: subject, url: url) } label: { SubjectRow(subject: subject).padding(11).frame(minHeight: 68).appCard(cornerRadius: 14) }.buttonStyle(.plain)
+                                    } else { SubjectRow(subject: subject).padding(11).frame(minHeight: 68).appCard(cornerRadius: 14) }
                                 }
                             }
                         }
@@ -1233,10 +1234,11 @@ private struct SubjectRow: View {
     let subject: SyllabusSubject
     private var appearance: CourseAppearance { .course(subject.name) }
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Image(systemName: appearance.symbol).foregroundStyle(.indigo)
-                .frame(width: 38, height: 38).background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 11))
-            VStack(alignment: .leading, spacing: 4) {
+                .font(.system(size: 15, weight: .medium))
+                .frame(width: 34, height: 34).background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 3) {
                 Text(subject.name).font(.headline).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
                 HStack(spacing: 6) {
                     if !subject.requirement.isEmpty { Text(subject.requirement) }

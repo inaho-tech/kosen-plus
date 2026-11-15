@@ -72,6 +72,7 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
         .appScreenBackground()
         .navigationTitle("マイページ")
+        .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("WebClassからログアウトしますか？", isPresented: $confirmingLogout, titleVisibility: .visible) {
             Button("ログアウト", role: .destructive) { webClass.logout() }
             Button("キャンセル", role: .cancel) {}

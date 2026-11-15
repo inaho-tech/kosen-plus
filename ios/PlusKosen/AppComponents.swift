@@ -59,6 +59,19 @@ extension View {
         self.background(.ultraThinMaterial, in: Capsule()).overlay(Capsule().stroke(.white.opacity(0.28), lineWidth: 0.8))
 #endif
     }
+
+    @ViewBuilder
+    func liquidGlassSelection() -> some View {
+#if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: Capsule())
+        } else {
+            self.background(.thinMaterial, in: Capsule()).overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.7))
+        }
+#else
+        self.background(.thinMaterial, in: Capsule()).overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.7))
+#endif
+    }
 }
 
 private struct LiquidGlassCardModifier: ViewModifier {

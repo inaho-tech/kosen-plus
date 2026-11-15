@@ -11,6 +11,11 @@
   ![iOS](https://img.shields.io/badge/iOS-SwiftUI-000000?logo=apple&logoColor=white)
   ![Kotlin](https://img.shields.io/badge/Kotlin-Compose-7F52FF?logo=kotlin&logoColor=white)
   ![Status](https://img.shields.io/badge/status-development-5865F2)
+
+  <br><br>
+  <a href="https://github.com/duckcat-chan/kosen-plus/releases">
+    <img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="210" alt="Get it on GitHub">
+  </a>
 </div>
 
 ---

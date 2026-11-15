@@ -32,10 +32,11 @@ struct ToolsView: View {
                 toolGrid(studyTools)
                 AppSectionHeader(title: "ゲーム", symbol: "gamecontroller").padding(.top, 6)
                 toolGrid(gameTools)
-            }.padding().appReadableContentWidth()
+            }.padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16).appReadableContentWidth()
         }
         .appScreenBackground()
         .navigationTitle("ツール")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: ToolDestination.self) { ToolRouter(id: $0.id, title: $0.title) }
     }
 
@@ -131,31 +132,49 @@ struct TodoView: View {
 }
 
 struct ReactionView: View {
-    enum Phase { case ready, waiting, tap }
-    @State private var phase = Phase.ready
-    @State private var start = Date.now
+    enum Phase { case idle, waiting, ready, result, tooEarly }
+    @State private var phase = Phase.idle
+    @State private var readyAt = Date.now
+    @State private var token = UUID()
     @AppStorage("reactionBest") private var best = 0.0
+    @AppStorage("reactionLast") private var last = 0.0
+    @AppStorage("reactionTotal") private var total = 0.0
+    @AppStorage("reactionAttempts") private var attempts = 0
     var body: some View {
-        VStack(spacing: 20) {
-            if best > 0 { Text("ベスト \(Int(best)) ms").font(.headline) }
+        VStack(spacing: 16) {
+            HStack(spacing: 10) {
+                stat("自己ベスト", best > 0 ? "\(Int(best)) ms" : "—")
+                stat("直近", last > 0 ? "\(Int(last)) ms" : "—")
+                stat("平均", attempts > 0 ? "\(Int(total / Double(attempts))) ms" : "—")
+            }.padding(.horizontal)
             Button { tapped() } label: {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 28).fill(phase == .tap ? Color.green : phase == .waiting ? Color.orange : Color.indigo)
-                    Text(phase == .ready ? "タップして開始" : phase == .waiting ? "緑になるまで待つ" : "今すぐタップ").font(.title2.bold()).foregroundStyle(.white)
+                    RoundedRectangle(cornerRadius: 28).fill(buttonColor)
+                    VStack(spacing: 8) {
+                        Image(systemName: phase == .ready ? "bolt.fill" : phase == .tooEarly ? "exclamationmark.triangle.fill" : "hand.tap.fill").font(.largeTitle)
+                        Text(buttonText).font(.title2.bold())
+                        if phase == .result { Text("もう一度タップして再挑戦").font(.caption) }
+                    }.foregroundStyle(.white)
                 }
             }.buttonStyle(.plain).padding().frame(maxHeight: 420)
-        }
+        }.appScreenBackground()
     }
+    private var buttonText: String { switch phase { case .idle: "タップして開始"; case .waiting: "色が変わるまで待つ"; case .ready: "今すぐタップ"; case .result: "\(Int(last)) ms"; case .tooEarly: "早すぎます" } }
+    private var buttonColor: Color { switch phase { case .ready: .green; case .waiting: .orange; case .tooEarly: .red; default: .indigo } }
+    private func stat(_ title: String, _ value: String) -> some View { VStack(spacing: 4) { Text(value).font(.headline.monospacedDigit()); Text(title).font(.caption2).foregroundStyle(.secondary) }.frame(maxWidth: .infinity).padding(.vertical, 12).appCard(cornerRadius: 14) }
     private func tapped() {
         switch phase {
-        case .ready:
+        case .idle, .result, .tooEarly:
             phase = .waiting
-            Task { try? await Task.sleep(for: .seconds(Double.random(in: 1.5...4))); if phase == .waiting { start = .now; phase = .tap } }
-        case .waiting: phase = .ready
-        case .tap:
-            let ms = Date.now.timeIntervalSince(start) * 1000
+            let current = UUID(); token = current
+            Task { try? await Task.sleep(for: .seconds(Double.random(in: 1.5...4))); if phase == .waiting && token == current { readyAt = .now; phase = .ready } }
+        case .waiting:
+            token = UUID(); phase = .tooEarly
+        case .ready:
+            let ms = Date.now.timeIntervalSince(readyAt) * 1000
+            last = ms; total += ms; attempts += 1
             if best == 0 || ms < best { best = ms }
-            phase = .ready
+            phase = .result
         }
     }
 }
