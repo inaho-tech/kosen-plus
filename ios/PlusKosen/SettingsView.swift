@@ -61,7 +61,7 @@ struct SettingsView: View {
 
             Section("一般") {
                 NavigationLink { AppInfoView() } label: {
-                    IOSSettingsRow(symbol: "info.circle.fill", color: .blue, title: "情報", subtitle: "取得元とバージョン")
+                    IOSSettingsRow(symbol: "info.circle.fill", color: .blue, title: "情報・ライセンス", subtitle: "取得元・バージョン・OSS")
                 }
             }
         }
@@ -125,7 +125,7 @@ struct AppInfoView: View {
                 Link("高専Webシラバス", destination: URL(string: "https://syllabus.kosen-k.go.jp/")!)
                 Link("どこトレ（アプリ内名称：電車）", destination: URL(string: "https://doko-train.jp/sp/")!)
             }
-        }.navigationTitle("情報")
+        }.navigationTitle("情報・ライセンス")
     }
 }
 
