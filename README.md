@@ -13,9 +13,8 @@
   ![Status](https://img.shields.io/badge/status-development-5865F2)
 
   <br><br>
-  <a href="https://github.com/duckcat-chan/kosen-plus/releases">
-    <img src="https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png" width="210" alt="Get it on GitHub">
-  </a>
+
+  [![](https://raw.githubusercontent.com/rubenpgrady/get-it-on-github/refs/heads/main/get-it-on-github.png)](https://github.com/duckcat-chan/kosen-plus/releases)
 </div>
 
 ---
