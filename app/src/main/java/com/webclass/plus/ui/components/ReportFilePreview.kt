@@ -1,8 +1,13 @@
 package com.webclass.plus.ui.components
 
+import android.app.DownloadManager
+import android.content.Context
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Environment
 import android.webkit.CookieManager
 import android.webkit.WebSettings
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -21,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
@@ -182,6 +188,11 @@ fun ReportFilePreviewDialog(
                         }
                     },
                     actions = {
+                        IconButton(
+                            onClick = { downloadReportAttachment(context, request) }
+                        ) {
+                            Icon(Icons.Outlined.Download, contentDescription = "ダウンロード")
+                        }
                         if (error != null) {
                             IconButton(onClick = { reloadKey++ }) {
                                 Icon(Icons.Outlined.Refresh, contentDescription = "再読み込み")
@@ -221,6 +232,37 @@ fun ReportFilePreviewDialog(
                 }
             }
         }
+    }
+}
+
+private fun downloadReportAttachment(context: Context, request: ReportFilePreviewRequest) {
+    runCatching {
+        val safeName = request.fileName
+            .substringAfterLast('/')
+            .substringAfterLast('\\')
+            .replace(Regex("[\\x00-\\x1F<>:\"/\\\\|?*]"), "_")
+            .trim()
+            .ifBlank { "report_attachment" }
+        val downloadRequest = DownloadManager.Request(Uri.parse(request.url)).apply {
+            CookieManager.getInstance().getCookie(request.url)?.takeIf { it.isNotBlank() }?.let {
+                addRequestHeader("Cookie", it)
+            }
+            addRequestHeader("User-Agent", WebSettings.getDefaultUserAgent(context))
+            addRequestHeader("Referer", "https://webclass.kosen-k.go.jp/webclass/")
+            setTitle(safeName)
+            setDescription("マイレポートの添付ファイルを保存しています")
+            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, safeName)
+        }
+        val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        manager.enqueue(downloadRequest)
+        Toast.makeText(context, "ダウンロードを開始しました", Toast.LENGTH_SHORT).show()
+    }.onFailure { error ->
+        Toast.makeText(
+            context,
+            "ダウンロードを開始できませんでした: ${error.localizedMessage}",
+            Toast.LENGTH_LONG
+        ).show()
     }
 }
 
