@@ -1,14 +1,7 @@
 package com.webclass.plus.ui.screens
 
-import android.app.DownloadManager
-import android.content.Context
-import android.net.Uri
-import android.os.Environment
 import android.util.Log
-import android.webkit.CookieManager
-import android.webkit.URLUtil
 import android.webkit.WebView
-import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -39,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.gson.Gson
 import com.webclass.plus.data.models.ReportItem
+import com.webclass.plus.ui.components.ReportFilePreviewDialog
+import com.webclass.plus.ui.components.ReportFilePreviewRequest
 import com.webclass.plus.ui.components.WebClassWebView
 import com.webclass.plus.ui.components.shimmerEffect
 import com.webclass.plus.util.JavaScriptBridge
@@ -83,6 +77,7 @@ fun CourseReportsScreen(
     
     val gson = remember { Gson() }
     val scope = rememberCoroutineScope()
+    var previewFile by remember { mutableStateOf<ReportFilePreviewRequest?>(null) }
 
     // Safety timeout
     LaunchedEffect(isLoading) {
@@ -261,13 +256,15 @@ fun CourseReportsScreen(
                                 selectedReport = selectedReport,
                                 onReportSelected = { selectedReport = it },
                                 onTaskClick = onTaskClick,
-                                onScoreDetailClick = onScoreDetailClick
+                                onScoreDetailClick = onScoreDetailClick,
+                                onFilePreview = { url, name -> previewFile = ReportFilePreviewRequest(url, name) }
                             )
                         } else {
                             ReportsContent(
                                 reports = reports,
                                 onTaskClick = onTaskClick,
-                                onScoreDetailClick = onScoreDetailClick
+                                onScoreDetailClick = onScoreDetailClick,
+                                onFilePreview = { url, name -> previewFile = ReportFilePreviewRequest(url, name) }
                             )
                         }
                     }
@@ -275,13 +272,21 @@ fun CourseReportsScreen(
             }
         }
     }
+
+    previewFile?.let { request ->
+        ReportFilePreviewDialog(
+            request = request,
+            onDismiss = { previewFile = null }
+        )
+    }
 }
 
 @Composable
 private fun ReportsContent(
     reports: List<ReportItem>,
     onTaskClick: (String, String) -> Unit,
-    onScoreDetailClick: (String) -> Unit
+    onScoreDetailClick: (String) -> Unit,
+    onFilePreview: (String, String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -292,7 +297,8 @@ private fun ReportsContent(
             ReportItemCard(
                 report = report,
                 onTaskClick = onTaskClick,
-                onScoreDetailClick = onScoreDetailClick
+                onScoreDetailClick = onScoreDetailClick,
+                onFilePreview = onFilePreview
             )
         }
     }
@@ -302,9 +308,9 @@ private fun ReportsContent(
 private fun ReportItemCard(
     report: ReportItem,
     onTaskClick: (String, String) -> Unit,
-    onScoreDetailClick: (String) -> Unit
+    onScoreDetailClick: (String) -> Unit,
+    onFilePreview: (String, String) -> Unit
 ) {
-    val context = LocalContext.current
     val hasResult = report.result == "○" || report.result == "OK"
     val accentColor = if (hasResult) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
     val badgeContainerColor = if (hasResult) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
@@ -396,7 +402,7 @@ private fun ReportItemCard(
                             modifier = Modifier
                                 .clickable {
                                     report.reportFileUrl.let {
-                                        downloadReportFile(context, it, report.reportFileName)
+                                        onFilePreview(it, report.reportFileName)
                                     }
                                 }
                                 .padding(12.dp),
@@ -424,8 +430,8 @@ private fun ReportItemCard(
                                 )
                             }
                             Icon(
-                                Icons.Default.Download,
-                                contentDescription = "ダウンロード",
+                                Icons.Outlined.Visibility,
+                                contentDescription = "プレビュー",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -465,7 +471,7 @@ private fun ReportItemCard(
                         Row(
                             modifier = Modifier
                                 .clickable {
-                                    downloadReportFile(context, report.correctedFileUrl, report.correctedFileName)
+                                    onFilePreview(report.correctedFileUrl, report.correctedFileName)
                                 }
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -492,8 +498,8 @@ private fun ReportItemCard(
                                 )
                             }
                             Icon(
-                                Icons.Default.Download,
-                                contentDescription = "ダウンロード",
+                                Icons.Outlined.Visibility,
+                                contentDescription = "プレビュー",
                                 tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -581,36 +587,6 @@ private fun ReportItemCard(
                 }
             }
         }
-    }
-}
-
-private fun downloadReportFile(context: Context, downloadUrl: String, fileName: String) {
-    try {
-        val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
-            // Retrieve cookies for authenticated download
-            val cookies = CookieManager.getInstance().getCookie(downloadUrl)
-            addRequestHeader("Cookie", cookies)
-            addRequestHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.0.0 Mobile Safari/537.36")
-            
-            setDescription("レポートファイルをダウンロード中...")
-            setTitle(fileName)
-            
-            // Set visibility of notifications
-            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            
-            // Set destination to Downloads directory
-            setDestinationInExternalPublicDir(
-                Environment.DIRECTORY_DOWNLOADS,
-                fileName
-            )
-        }
-        
-        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        downloadManager.enqueue(request)
-        
-        Toast.makeText(context, "ダウンロードを開始しました", Toast.LENGTH_SHORT).show()
-    } catch (e: Exception) {
-        Toast.makeText(context, "ダウンロードに失敗しました: ${e.message}", Toast.LENGTH_LONG).show()
     }
 }
 
@@ -751,7 +727,8 @@ private fun ReportsTabletLayout(
     selectedReport: ReportItem?,
     onReportSelected: (ReportItem) -> Unit,
     onTaskClick: (String, String) -> Unit,
-    onScoreDetailClick: (String) -> Unit
+    onScoreDetailClick: (String) -> Unit,
+    onFilePreview: (String, String) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxSize(),
@@ -795,7 +772,8 @@ private fun ReportsTabletLayout(
                 ReportDetailPane(
                     report = selectedReport,
                     onTaskClick = onTaskClick,
-                    onScoreDetailClick = onScoreDetailClick
+                    onScoreDetailClick = onScoreDetailClick,
+                    onFilePreview = onFilePreview
                 )
             } else {
                 Box(
@@ -931,9 +909,9 @@ private fun SimplifiedReportItemCard(
 private fun ReportDetailPane(
     report: ReportItem,
     onTaskClick: (String, String) -> Unit,
-    onScoreDetailClick: (String) -> Unit
+    onScoreDetailClick: (String) -> Unit,
+    onFilePreview: (String, String) -> Unit
 ) {
-    val context = LocalContext.current
     val scrollState = rememberScrollState()
     
     val hasResult = report.result == "○" || report.result == "OK"
@@ -1027,7 +1005,7 @@ private fun ReportDetailPane(
                                 modifier = Modifier
                                     .clickable {
                                         report.reportFileUrl?.let {
-                                            downloadReportFile(context, it, report.reportFileName)
+                                            onFilePreview(it, report.reportFileName)
                                         }
                                     }
                                     .padding(16.dp),
@@ -1055,8 +1033,8 @@ private fun ReportDetailPane(
                                     )
                                 }
                                 Icon(
-                                    Icons.Default.Download,
-                                    contentDescription = "ダウンロード",
+                                    Icons.Outlined.Visibility,
+                                    contentDescription = "プレビュー",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -1105,7 +1083,7 @@ private fun ReportDetailPane(
                             Row(
                                 modifier = Modifier
                                     .clickable {
-                                        downloadReportFile(context, report.correctedFileUrl, report.correctedFileName)
+                                        onFilePreview(report.correctedFileUrl, report.correctedFileName)
                                     }
                                     .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1132,8 +1110,8 @@ private fun ReportDetailPane(
                                     )
                                 }
                                 Icon(
-                                    Icons.Default.Download,
-                                    contentDescription = "ダウンロード",
+                                    Icons.Outlined.Visibility,
+                                    contentDescription = "プレビュー",
                                     tint = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.size(20.dp)
                                 )

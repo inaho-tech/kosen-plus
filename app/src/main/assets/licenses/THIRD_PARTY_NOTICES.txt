@@ -7,13 +7,14 @@ Apache License 2.0 components
 ----------------------------------------
 - AndroidX libraries, including Jetpack Compose, Lifecycle, Activity, Navigation,
   DataStore, WebKit, Palette, CameraX and Media3
-- Kotlin standard library and kotlinx.coroutines
+- Kotlin standard library, kotlinx.coroutines and kotlinx.serialization
 - Gson and Error Prone annotations
 - Guava, failureaccess and ListenableFuture
 - AutoValue annotations
 - JetBrains annotations
 - Okio
 - PDFBox-Android
+- Highlights
 
 These components are licensed under the Apache License, Version 2.0.
 The complete license text follows this notice in the app.

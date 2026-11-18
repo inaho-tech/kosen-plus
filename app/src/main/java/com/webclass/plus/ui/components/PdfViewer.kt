@@ -69,7 +69,8 @@ fun PdfViewer(
     pdfUrl: String,
     detectedPdfUrls: List<String> = emptyList(),
     onPdfUrlSelected: (String) -> Unit = {},
-    title: String = "PDFプレビュー"
+    title: String = "PDFプレビュー",
+    showTopBar: Boolean = true
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -266,7 +267,8 @@ fun PdfViewer(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
-        topBar = {
+        topBar = if (showTopBar) {
+            {
             TopAppBar(
                 windowInsets = WindowInsets(0.dp),
                 title = {
@@ -342,6 +344,9 @@ fun PdfViewer(
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+            }
+        } else {
+            {}
         }
     ) { paddingValues ->
         Box(

@@ -219,7 +219,7 @@ fun AppInfoScreen(
 
                         LicenseListItem("AndroidX（Compose・CameraX・Media3を含む）", "Apache License 2.0", "The Android Open Source Project")
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        LicenseListItem("Kotlin・Kotlin Coroutines", "Apache License 2.0", "JetBrains s.r.o. and contributors")
+                        LicenseListItem("Kotlin・kotlinx（Coroutines・Serialization）", "Apache License 2.0", "JetBrains s.r.o. and contributors")
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         LicenseListItem("Gson・Guava・AutoValue annotations", "Apache License 2.0", "Google LLC and contributors")
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -228,6 +228,8 @@ fun AppInfoScreen(
                         LicenseListItem("PDFBox-Android", "Apache License 2.0", "Tom Roush and Apache PDFBox contributors")
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         LicenseListItem("Dark Reader", "MIT License", "Copyright © 2026 Dark Reader Ltd.")
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        LicenseListItem("Highlights", "Apache License 2.0", "Copyright © 2023–2024 Tomasz Kądziołka")
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         LicenseListItem("jsoup", "MIT License", "Copyright © 2009–2024 Jonathan Hedley")
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))

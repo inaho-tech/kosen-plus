@@ -84,6 +84,9 @@ dependencies {
     // HTML Parser
     implementation("org.jsoup:jsoup:1.18.1")
 
+    // Pure Kotlin syntax highlighting engine
+    implementation("dev.snipme:highlights:1.0.0")
+
     // Palette (wallpaper color extraction)
     implementation("androidx.palette:palette-ktx:1.0.0")
 
