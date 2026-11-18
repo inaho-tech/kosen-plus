@@ -13,6 +13,11 @@ data class VersionEntry(
 object VersionHistory {
 
     val entries: List<VersionEntry> = listOf(
+        VersionEntry("4.5.4", "2026-11-18", listOf(
+            "マイレポートの提出ファイルと添削ファイルを、ダウンロードせずにアプリ内でプレビューできるよう改善",
+            "PDF・画像・音声・動画・テキストのプレビューと、ソースコードの行番号・シンタックスハイライト表示に対応",
+            "添付ファイルのプレビュー画面に、認証情報を引き継いで保存できるダウンロードボタンを追加"
+        )),
         VersionEntry("4.5.3", "2026-11-15", listOf(
             "アップデートの確認・ダウンロード・インストール方法をGitHub Releases利用方式へ変更"
         )),

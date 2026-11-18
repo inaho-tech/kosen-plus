@@ -12,7 +12,7 @@ object UpdateChecker {
     private const val TAG = "UpdateChecker"
     private const val UPDATE_CHECK_URL = "https://api.github.com/repos/inaho-tech/kosen-plus/releases/latest"
     const val UPDATE_PAGE_URL = "https://github.com/inaho-tech/kosen-plus/releases"
-    const val CURRENT_VERSION = "4.5.3"
+    const val CURRENT_VERSION = "4.5.4"
 
     data class UpdateInfo(
         val latestVersion: String,
